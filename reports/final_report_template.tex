@@ -1,0 +1,74 @@
+\documentclass[11pt]{article}
+\usepackage[margin=1in]{geometry}
+\usepackage{booktabs}
+\usepackage{graphicx}
+\usepackage{hyperref}
+\usepackage{amsmath}
+
+\title{Intelligent Reading Comprehension and Quiz Generation System}
+\author{Your Name}
+\date{\today}
+
+\begin{document}
+\maketitle
+
+\begin{abstract}
+This report presents a traditional machine-learning system for reading comprehension and quiz generation using the RACE dataset. The system combines sparse one-hot text features, lexical overlap features, supervised answer verification, unsupervised and semi-supervised analysis, template-based question generation, distractor ranking, hint generation, and a Streamlit interface. Replace this placeholder with final quantitative results after training.
+\end{abstract}
+
+\section{Introduction}
+Describe the reading comprehension problem, the educational value of automatic quiz generation, and the project objectives.
+
+\section{Related Work}
+Discuss at least five sources: RACE, information retrieval baselines, scikit-learn traditional ML, automatic distractor generation, and hint generation.
+
+\section{Dataset Analysis}
+Report the RACE train, validation, and test shapes; missing values; answer balance; article word counts; question type distribution; option length bias; TF-IDF terms; and cosine similarity findings from the EDA notebook.
+
+\section{Model A Design, Training, and Results}
+Explain the binary expansion of each RACE row into four option-level samples. Describe one-hot encoding, lexical features, Logistic Regression, calibrated LinearSVC, ComplementNB question-type classification, soft voting, hard voting, stacking, optional XGBoost, KMeans, GMM, and LabelSpreading. Insert the final Model A comparison table.
+
+\begin{table}[h]
+\centering
+\begin{tabular}{lrrrr}
+\toprule
+Model & Accuracy & Macro F1 & Precision & Recall \\
+\midrule
+Logistic Regression & TBD & TBD & TBD & TBD \\
+Calibrated LinearSVC & TBD & TBD & TBD & TBD \\
+Soft Voting Ensemble & TBD & TBD & TBD & TBD \\
+Hard Voting Ensemble & TBD & TBD & TBD & TBD \\
+Stacking Ensemble & TBD & TBD & TBD & TBD \\
+XGBoost Optional & TBD & TBD & TBD & TBD \\
+\bottomrule
+\end{tabular}
+\caption{Model A validation or test performance.}
+\end{table}
+
+\section{Model B Design, Training, and Results}
+Explain candidate phrase extraction, medium-similarity distractor ranking, diversity penalties, frequency-based substitution, graduated hints, and the logistic hint scorer. Include distractor precision, recall, F1, ranker accuracy, hint Precision@K, R\textsuperscript{2}, and diversity.
+
+\section{Human Evaluation}
+Describe the 1--5 Likert evaluation for distractor plausibility, grammaticality, relevance, and incorrectness. Summarize evaluator agreement and average ratings.
+
+\section{UI Description}
+Describe the Streamlit Article Input, Quiz View, Hint Panel, and Analytics Dashboard screens.
+
+\section{Evaluation and Discussion}
+Discuss confusion matrices, exact match, macro F1, latency, qualitative examples, and observed strengths or weaknesses.
+
+\section{Limitations and Future Work}
+Discuss lexical shortcut risk, limited semantic reasoning, template grammar issues, and possible future neural or retrieval-augmented extensions.
+
+\section{Conclusion}
+Summarize the implemented system, major findings, and final educational value.
+
+\begin{thebibliography}{9}
+\bibitem{race} G. Lai, Q. Xie, H. Liu, Y. Yang, and E. Hovy, ``RACE: Large-scale ReAding Comprehension Dataset From Examinations.''
+\bibitem{ir} C. D. Manning, P. Raghavan, and H. Schutze, \textit{Introduction to Information Retrieval}.
+\bibitem{sklearn} F. Pedregosa et al., ``Scikit-learn: Machine Learning in Python.''
+\bibitem{mitkov} R. Mitkov, L. A. Ha, and N. Karamanis, ``A computer-aided environment for generating multiple-choice test items.''
+\bibitem{distractors} Y. Susanti et al., ``Automatic distractor generation for multiple-choice English vocabulary questions.''
+\end{thebibliography}
+
+\end{document}

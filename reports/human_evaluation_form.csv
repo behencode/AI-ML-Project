@@ -1,0 +1,4 @@
+evaluator_id,item_id,article_id,question,distractor,plausibility_1_5,grammaticality_1_5,relevance_1_5,not_correct_1_5,comments
+E001,1,,,,,,,,
+E001,2,,,,,,,,
+E001,3,,,,,,,,
