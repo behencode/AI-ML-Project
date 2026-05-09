@@ -182,30 +182,40 @@ def _has_split_csvs(raw_dir: str) -> bool:
     return all(os.path.exists(os.path.join(raw_dir, name)) for name in ["train.csv", "val.csv", "test.csv"])
 
 
-def _candidate_source_csvs(raw_dir: str) -> list[str]:
-    """Find downloaded CSV files that are not already project split files."""
+def _candidate_source_csvs(raw_dir: str, include_split_files: bool = False) -> list[str]:
+    """Find downloaded CSV files that can be used as a single source file.
+
+    Args:
+        raw_dir: Folder to search recursively.
+        include_split_files: Whether train/val/test CSV names may be used as source files.
+
+    Returns:
+        Candidate CSV paths sorted by file size descending.
+    """
     split_names = {"train.csv", "val.csv", "test.csv"}
     paths = []
     for csv_path in glob.glob(os.path.join(raw_dir, "**", "*.csv"), recursive=True):
-        if os.path.basename(csv_path).lower() not in split_names:
+        if include_split_files or os.path.basename(csv_path).lower() not in split_names:
             paths.append(csv_path)
     return sorted(paths, key=lambda path: os.path.getsize(path), reverse=True)
 
 
-def split_single_csv(raw_dir: str = os.path.join("data", "raw"), source_csv: str = "") -> None:
+def split_single_csv(raw_dir: str = os.path.join("data", "raw"), source_csv: str = "", force: bool = False) -> None:
     """Split one Kaggle CSV into train/val/test using an 80/10/10 proportion.
 
     Args:
         raw_dir: Folder containing the downloaded CSV.
         source_csv: Optional explicit single CSV path. If omitted, the largest non-split CSV is used.
+        force: Overwrite existing train/val/test files from a single source CSV.
 
     Returns:
         None.
     """
-    if _has_split_csvs(raw_dir):
+    if _has_split_csvs(raw_dir) and not force:
         print("train.csv, val.csv, and test.csv already exist; skipping 80/10/10 split.")
         return
-    csv_path = source_csv or (_candidate_source_csvs(raw_dir)[0] if _candidate_source_csvs(raw_dir) else "")
+    candidates = _candidate_source_csvs(raw_dir, include_split_files=force)
+    csv_path = source_csv or (candidates[0] if candidates else "")
     if not csv_path:
         print("No single source CSV found to split. Place the Kaggle CSV in data/raw or pass --source-csv.")
         return
@@ -251,7 +261,7 @@ def download_race_dataset(dataset_slug: str = DEFAULT_DATASET_SLUG, raw_dir: str
     """
     os.makedirs(raw_dir, exist_ok=True)
     if _has_split_csvs(raw_dir):
-        print("RACE CSVs already found; skipping Kaggle download.")
+        print("Existing split CSVs found. Keeping download step skipped; use --force-resplit to overwrite them.")
         return
     if not dataset_slug:
         print("No Kaggle dataset slug supplied. Place one RACE CSV in data/raw or pass --source-csv.")
@@ -265,7 +275,6 @@ def download_race_dataset(dataset_slug: str = DEFAULT_DATASET_SLUG, raw_dir: str
         except zipfile.BadZipFile as exc:
             raise RuntimeError(f"Downloaded file is not a valid zip: {zip_path}") from exc
     normalize_downloaded_csvs(raw_dir)
-    split_single_csv(raw_dir)
 
 
 def verify_csvs(raw_dir: str = os.path.join("data", "raw")) -> None:
@@ -299,6 +308,7 @@ def main() -> None:
     parser = argparse.ArgumentParser(description="Set up the RACE quiz generation project on Colab.")
     parser.add_argument("--dataset-slug", default=DEFAULT_DATASET_SLUG, help="Kaggle dataset slug containing one RACE CSV.")
     parser.add_argument("--source-csv", default="", help="Optional local single CSV to split into 80/10/10.")
+    parser.add_argument("--force-resplit", action="store_true", help="Overwrite train/val/test with a fresh 80/10/10 split.")
     parser.add_argument("--skip-install", action="store_true", help="Skip pip install.")
     args = parser.parse_args()
     create_directories()
@@ -310,7 +320,9 @@ def main() -> None:
     elif not args.source_csv:
         print("Skipping Kaggle download until kaggle.json is uploaded. You can still split a local CSV with --source-csv.")
     if args.source_csv:
-        split_single_csv(source_csv=args.source_csv)
+        split_single_csv(source_csv=args.source_csv, force=True)
+    elif args.force_resplit or args.dataset_slug == DEFAULT_DATASET_SLUG:
+        split_single_csv(force=True)
     else:
         split_single_csv()
     verify_csvs()
