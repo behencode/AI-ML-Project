@@ -73,28 +73,51 @@ def create_directories(directories: Iterable[str] = PROJECT_DIRS) -> None:
         print(f"Ensured directory: {directory}")
 
 
-def configure_kaggle(kaggle_json_path: str = "kaggle.json") -> bool:
+def configure_kaggle(kaggle_json_path: str = "kaggle.json", access_token_path: str = "access_token") -> bool:
     """Configure Kaggle credentials for Colab.
 
     Args:
-        kaggle_json_path: Path to the uploaded Kaggle API token.
+        kaggle_json_path: Path to the legacy Kaggle JSON token.
+        access_token_path: Path to a new-style Kaggle access-token file.
 
     Returns:
         True if credentials were configured, otherwise False.
     """
-    if not os.path.exists(kaggle_json_path):
-        print("kaggle.json not found. Upload it to the Colab working directory before downloading.")
-        return False
     kaggle_dir = os.path.expanduser(os.path.join("~", ".kaggle"))
     os.makedirs(kaggle_dir, exist_ok=True)
-    target = os.path.join(kaggle_dir, "kaggle.json")
-    try:
-        shutil.copy(kaggle_json_path, target)
-        os.chmod(target, 0o600)
-        print("Kaggle credentials configured.")
+    json_target = os.path.join(kaggle_dir, "kaggle.json")
+    token_target = os.path.join(kaggle_dir, "access_token")
+    if os.path.exists(kaggle_json_path):
+        try:
+            shutil.copy(kaggle_json_path, json_target)
+            os.chmod(json_target, 0o600)
+            print("Kaggle JSON credentials configured.")
+            return True
+        except OSError as exc:
+            raise RuntimeError("Failed to configure Kaggle JSON credentials.") from exc
+    if os.path.exists(access_token_path):
+        try:
+            shutil.copy(access_token_path, token_target)
+            os.chmod(token_target, 0o600)
+            print("Kaggle access token configured from local access_token file.")
+            return True
+        except OSError as exc:
+            raise RuntimeError("Failed to configure Kaggle access token.") from exc
+    env_token = os.environ.get("KAGGLE_API_TOKEN", "").strip()
+    if env_token:
+        try:
+            with open(token_target, "w", encoding="utf-8") as file:
+                file.write(env_token)
+            os.chmod(token_target, 0o600)
+            print("Kaggle access token configured from KAGGLE_API_TOKEN.")
+            return True
+        except OSError as exc:
+            raise RuntimeError("Failed to write Kaggle access token from environment.") from exc
+    if os.path.exists(json_target) or os.path.exists(token_target):
+        print("Existing Kaggle credentials found in ~/.kaggle.")
         return True
-    except OSError as exc:
-        raise RuntimeError("Failed to configure Kaggle credentials.") from exc
+    print("No Kaggle credentials found. Upload kaggle.json, create ~/.kaggle/access_token, or set KAGGLE_API_TOKEN.")
+    return False
 
 
 def _normalize_columns(df: pd.DataFrame) -> pd.DataFrame:
