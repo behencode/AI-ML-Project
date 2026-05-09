@@ -6,7 +6,6 @@ import argparse
 import itertools
 import os
 import re
-import string
 from collections import Counter
 from typing import Any, Optional
 
@@ -178,18 +177,23 @@ def _sentence_features(sentence: str, question: str, correct_answer: str, positi
     ]
 
 
-def ml_hint_scorer(train_df: pd.DataFrame) -> LogisticRegression:
+def ml_hint_scorer(train_df: pd.DataFrame, max_rows: int = 2000) -> LogisticRegression:
     """Train a logistic sentence relevance scorer for hint selection.
 
     Args:
         train_df: RACE training DataFrame.
+        max_rows: Maximum source rows used to build sentence-level training data.
 
     Returns:
         Trained LogisticRegression scorer on five numeric features.
     """
     features: list[list[float]] = []
     labels: list[int] = []
-    for row in train_df.head(10000).itertuples(index=False):
+    rows = train_df.head(max_rows)
+    print(f"Training hint scorer on {len(rows)} source rows...")
+    for idx, row in enumerate(rows.itertuples(index=False), start=1):
+        if idx % 500 == 0:
+            print(f"  hint scorer rows processed: {idx}/{len(rows)}")
         answer_label = str(getattr(row, "answer")).strip().upper()
         correct_answer = str(getattr(row, answer_label, ""))
         sentences = split_sentences(str(getattr(row, "article")))
@@ -244,7 +248,10 @@ def evaluate_model_b(df: pd.DataFrame, vectorizer: Optional[CountVectorizer], ma
     hint_hits: list[int] = []
     diversities: list[float] = []
     rows = df.head(max_rows)
-    for row in rows.itertuples(index=False):
+    print(f"Evaluating distractors and hints on {len(rows)} validation rows...")
+    for idx, row in enumerate(rows.itertuples(index=False), start=1):
+        if idx % 100 == 0:
+            print(f"  Model B eval rows processed: {idx}/{len(rows)}")
         answer_label = str(getattr(row, "answer")).strip().upper()
         correct = str(getattr(row, answer_label))
         gold_wrong = {clean_text(str(getattr(row, label))) for label in ["A", "B", "C", "D"] if label != answer_label}
@@ -287,7 +294,11 @@ def evaluate_hint_scorer(df: pd.DataFrame, scorer: LogisticRegression, max_rows:
     """
     X: list[list[float]] = []
     y: list[int] = []
-    for row in df.head(max_rows).itertuples(index=False):
+    rows = df.head(max_rows)
+    print(f"Evaluating hint scorer R2 on {len(rows)} validation rows...")
+    for idx, row in enumerate(rows.itertuples(index=False), start=1):
+        if idx % 100 == 0:
+            print(f"  hint R2 rows processed: {idx}/{len(rows)}")
         answer_label = str(getattr(row, "answer")).strip().upper()
         correct = str(getattr(row, answer_label))
         sentences = split_sentences(str(getattr(row, "article")))
@@ -304,6 +315,9 @@ def train_model_b(
     raw_data_dir: str = os.path.join("data", "raw"),
     processed_dir: str = os.path.join("data", "processed"),
     model_dir: str = os.path.join("models", "model_b", "traditional"),
+    hint_train_rows: int = 2000,
+    eval_rows: int = 300,
+    hint_eval_rows: int = 200,
 ) -> dict[str, Any]:
     """Train and evaluate Model B artifacts.
 
@@ -311,6 +325,9 @@ def train_model_b(
         raw_data_dir: Directory containing original RACE CSVs.
         processed_dir: Directory containing saved OHE vectorizer.
         model_dir: Destination directory.
+        hint_train_rows: Maximum training rows for the ML hint scorer.
+        eval_rows: Maximum validation rows for distractor/hint evaluation.
+        hint_eval_rows: Maximum validation rows for hint scorer R².
 
     Returns:
         Metrics dictionary.
@@ -327,9 +344,9 @@ def train_model_b(
         print("Processed OHE vectorizer not found; fitting a small local vectorizer for Model B.")
         vectorizer = build_ohe_vectorizer(max_features=10000)
         vectorizer.fit(train_df["article"].fillna("").astype(str).head(10000))
-    scorer = ml_hint_scorer(train_df)
-    metrics = evaluate_model_b(val_df, vectorizer)
-    metrics["hint_scorer_r2"] = evaluate_hint_scorer(val_df, scorer)
+    scorer = ml_hint_scorer(train_df, max_rows=hint_train_rows)
+    metrics = evaluate_model_b(val_df, vectorizer, max_rows=eval_rows)
+    metrics["hint_scorer_r2"] = evaluate_hint_scorer(val_df, scorer, max_rows=hint_eval_rows)
     try:
         joblib.dump({"hint_scorer": scorer, "vectorizer": vectorizer}, os.path.join(model_dir, "model_b_artifacts.pkl"))
         joblib.dump(metrics, os.path.join(model_dir, "results.pkl"))
@@ -347,8 +364,11 @@ def main() -> None:
     parser.add_argument("--raw-data-dir", default=os.path.join("data", "raw"))
     parser.add_argument("--processed-dir", default=os.path.join("data", "processed"))
     parser.add_argument("--model-dir", default=os.path.join("models", "model_b", "traditional"))
+    parser.add_argument("--hint-train-rows", type=int, default=2000)
+    parser.add_argument("--eval-rows", type=int, default=300)
+    parser.add_argument("--hint-eval-rows", type=int, default=200)
     args = parser.parse_args()
-    train_model_b(args.raw_data_dir, args.processed_dir, args.model_dir)
+    train_model_b(args.raw_data_dir, args.processed_dir, args.model_dir, args.hint_train_rows, args.eval_rows, args.hint_eval_rows)
 
 
 if __name__ == "__main__":

@@ -98,8 +98,22 @@ Model A trains Logistic Regression, calibrated LinearSVC, ComplementNB question-
 
 ## Run the Streamlit App
 
+Local machine:
+
 ```bash
 streamlit run ui/app.py
+```
+
+Google Colab:
+
+```python
+%run ui/colab_launcher.py
+```
+
+Do not open `localhost:8501` directly from your browser when running on Colab. That `localhost` is your own laptop, not the remote Colab VM. The launcher uses Colab's built-in port proxy and opens the correct hosted window. If it does not load, inspect:
+
+```bash
+!cat streamlit.log
 ```
 
 If model files are missing, the app automatically enters demo mode with rule-based fallbacks and shows a warning banner.
