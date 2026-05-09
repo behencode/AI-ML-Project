@@ -10,6 +10,29 @@ from __future__ import annotations
 import os
 import subprocess
 import time
+import urllib.request
+
+
+def _wait_for_streamlit(port: int, timeout_seconds: int = 30) -> bool:
+    """Wait until the Streamlit HTTP server answers locally.
+
+    Args:
+        port: Local Streamlit port.
+        timeout_seconds: Maximum seconds to wait.
+
+    Returns:
+        True when the server responds, otherwise False.
+    """
+    deadline = time.time() + timeout_seconds
+    url = f"http://127.0.0.1:{port}/_stcore/health"
+    while time.time() < deadline:
+        try:
+            with urllib.request.urlopen(url, timeout=2) as response:
+                if response.status == 200:
+                    return True
+        except Exception:
+            time.sleep(1)
+    return False
 
 
 def launch_streamlit(port: int = 8501) -> None:
@@ -42,9 +65,19 @@ def launch_streamlit(port: int = 8501) -> None:
     ]
     with open(log_path, "w", encoding="utf-8") as log_file:
         subprocess.Popen(command, cwd=project_root, stdout=log_file, stderr=subprocess.STDOUT)
-    time.sleep(4)
-    print(f"Streamlit is starting on Colab port {port}. Logs: {log_path}")
-    print("If the window does not load, run: !cat streamlit.log")
+    print(f"Starting Streamlit on Colab port {port}...")
+    if not _wait_for_streamlit(port):
+        print("Streamlit did not pass the health check. Showing the latest log output:")
+        try:
+            with open(log_path, "r", encoding="utf-8") as log_file:
+                print(log_file.read()[-4000:])
+        except OSError as exc:
+            print(f"Could not read log file: {exc}")
+        return
+    proxy_url = output.eval_js(f"google.colab.kernel.proxyPort({port})")
+    print(f"Streamlit is ready: {proxy_url}")
+    print(f"Logs: {log_path}")
+    print("If the embedded window is blank, open the printed URL in a new browser tab.")
     output.serve_kernel_port_as_window(port)
 
 
