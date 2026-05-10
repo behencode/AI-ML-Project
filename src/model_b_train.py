@@ -38,20 +38,69 @@ def split_sentences(article: str) -> list[str]:
 
 
 def extract_candidate_phrases(article: str, correct_answer: str) -> list[str]:
-    """Extract unique content words and bigrams excluding the correct answer.
+    """Extract plausible candidate distractor phrases from the passage.
+
+    FIX: The original version returned single tokens (e.g. "book", "borrowed")
+    which made terrible distractors — they are obviously wrong to any reader.
+    Good distractors should be noun-like phrases that could plausibly answer
+    the question.  We now:
+      1. Prefer multi-word noun phrases (consecutive non-stop capitalised or
+         content words) that appear in the passage.
+      2. Fall back to individual content words only when fewer than 6
+         multi-word candidates are found.
+      3. Exclude any candidate that is a substring of or equal to the
+         correct answer.
 
     Args:
         article: Passage text.
         correct_answer: Gold answer to exclude.
 
     Returns:
-        Candidate distractor strings.
+        Candidate distractor strings, multi-word phrases first.
     """
-    tokens = [t for t in clean_text(article).split() if t not in ENGLISH_STOP_WORDS and len(t) > 2]
-    correct = clean_text(correct_answer)
-    candidates = set(tokens)
-    candidates.update(f"{a} {b}" for a, b in zip(tokens, tokens[1:]))
-    return sorted({c for c in candidates if c and c != correct and correct not in c})
+    correct_cleaned = clean_text(correct_answer)
+    correct_words = set(correct_cleaned.split())
+
+    # --- Step 1: extract multi-word noun-like phrases from raw article ---
+    # We look for runs of 2-4 consecutive words that are mostly non-stop
+    raw_words = str(article).split()
+    multi_word: list[str] = []
+    for n in (3, 2):  # prefer trigrams, then bigrams
+        for i in range(len(raw_words) - n + 1):
+            chunk = raw_words[i : i + n]
+            chunk_clean = [clean_text(w) for w in chunk]
+            # Reject if any token is a stop word or very short
+            if any(w in ENGLISH_STOP_WORDS or len(w) < 2 for w in chunk_clean):
+                continue
+            phrase = " ".join(chunk_clean)
+            # Reject if it overlaps too heavily with the correct answer
+            phrase_words = set(phrase.split())
+            if phrase_words.intersection(correct_words):
+                continue
+            if phrase and phrase != correct_cleaned:
+                multi_word.append(phrase)
+
+    # Deduplicate while preserving order
+    seen: set[str] = set()
+    unique_multi: list[str] = []
+    for p in multi_word:
+        if p not in seen:
+            seen.add(p)
+            unique_multi.append(p)
+
+    # --- Step 2: single content-word fallback ---
+    tokens = [
+        clean_text(t)
+        for t in str(article).split()
+        if clean_text(t) not in ENGLISH_STOP_WORDS
+        and len(clean_text(t)) > 2
+        and clean_text(t) not in correct_words
+    ]
+    unique_tokens = list(dict.fromkeys(tokens))  # preserve order, deduplicate
+
+    # Combine: multi-word phrases first, then single tokens
+    candidates = unique_multi + [t for t in unique_tokens if t not in seen]
+    return candidates
 
 
 def _candidate_similarity(candidates: list[str], correct_answer: str, vectorizer: Optional[CountVectorizer]) -> tuple[np.ndarray, Any]:
@@ -67,8 +116,16 @@ def _candidate_similarity(candidates: list[str], correct_answer: str, vectorizer
     return sims, matrix[:-1]
 
 
-def rank_distractors(candidates: list[str], correct_answer: str, vectorizer: Optional[CountVectorizer], top_k: int = 3) -> list[str]:
+def rank_distractors(
+    candidates: list[str],
+    correct_answer: str,
+    vectorizer: Optional[CountVectorizer],
+    top_k: int = 3,
+) -> list[str]:
     """Rank distractors by medium answer similarity plus a diversity penalty.
+
+    FIX: Results are now title-cased for readability, and the fallback
+    messages are more informative / passage-appropriate.
 
     Args:
         candidates: Candidate phrases.
@@ -77,14 +134,21 @@ def rank_distractors(candidates: list[str], correct_answer: str, vectorizer: Opt
         top_k: Number of distractors to return.
 
     Returns:
-        Top ranked distractor strings.
+        Top ranked distractor strings (title-cased).
     """
-    cleaned_candidates = [c for c in dict.fromkeys(candidates) if clean_text(c) != clean_text(correct_answer)]
+    cleaned_candidates = [
+        c for c in dict.fromkeys(candidates)
+        if clean_text(c) != clean_text(correct_answer) and c.strip()
+    ]
     if not cleaned_candidates:
-        return ["not mentioned", "another detail", "different answer"][:top_k]
+        return ["Another option", "A different answer", "None of the above"][:top_k]
+
     sims, matrix = _candidate_similarity(cleaned_candidates, correct_answer, vectorizer)
-    medium_bonus = np.where((sims >= 0.1) & (sims <= 0.6), 1.0, 0.25)
+
+    # Prefer candidates with moderate similarity (plausible but not correct)
+    medium_bonus = np.where((sims >= 0.05) & (sims <= 0.65), 1.0, 0.2)
     base_scores = medium_bonus - np.abs(sims - 0.35)
+
     selected: list[int] = []
     for _ in range(min(top_k, len(cleaned_candidates))):
         best_idx, best_score = -1, -np.inf
@@ -93,13 +157,24 @@ def rank_distractors(candidates: list[str], correct_answer: str, vectorizer: Opt
                 continue
             diversity_penalty = 0.0
             if selected:
-                diversity_penalty = float(np.max(cosine_similarity(matrix[idx], matrix[selected]).ravel()))
+                diversity_penalty = float(
+                    np.max(cosine_similarity(matrix[idx], matrix[selected]).ravel())
+                )
             final_score = float(score) - 0.35 * diversity_penalty
             if final_score > best_score:
                 best_idx, best_score = idx, final_score
         if best_idx >= 0:
             selected.append(best_idx)
-    return [cleaned_candidates[idx] for idx in selected]
+
+    # Title-case for readability in the UI
+    results = [cleaned_candidates[idx].title() for idx in selected]
+
+    # Pad if needed
+    fallbacks = ["Another option", "A different answer", "None of the above"]
+    while len(results) < top_k:
+        results.append(fallbacks[len(results) % len(fallbacks)])
+
+    return results[:top_k]
 
 
 def frequency_based_substitution(article: str, correct_answer: str) -> list[str]:
@@ -131,32 +206,84 @@ def _overlap(left: str, right: str) -> float:
 def generate_hints(article: str, question: str, correct_answer: str) -> list[str]:
     """Generate three graduated hints from sentence relevance scores.
 
+    FIX: The original code selected hints using three index positions
+    (low, mid, high) from ``argsort`` but presented them in the wrong
+    order — the *least* relevant sentence was shown first (Hint 1) and
+    the *most* relevant was Hint 3 (near-explicit), which is correct for
+    the gradual reveal.  However the index calculation was off: ``relevant_idx``
+    from ``argsort`` is ascending (lowest similarity first), so
+    ``relevant_idx[-1]`` is the *most* relevant sentence.  The three hints
+    should therefore be ordered least→middle→most relevant, which is what we
+    now do explicitly.
+
     Args:
         article: Passage text.
         question: Question text.
         correct_answer: Correct answer phrase.
 
     Returns:
-        Three hints ordered from vague to near-explicit.
+        Three hints ordered from vague (Hint 1) to near-explicit (Hint 3).
     """
     sentences = split_sentences(article)
     if not sentences:
-        return ["Review the passage topic.", "Look for details related to the question.", f"Consider: {correct_answer}"]
+        return [
+            "Review the passage topic.",
+            "Look for details related to the question.",
+            f"Consider: {correct_answer}",
+        ]
+
     vectorizer = build_ohe_vectorizer(max_features=5000)
     try:
         matrix = vectorizer.fit_transform(sentences + [question])
         sims = cosine_similarity(matrix[:-1], matrix[-1]).ravel()
     except Exception:
         sims = np.asarray([_overlap(sentence, question) for sentence in sentences], dtype=float)
-    relevant_idx = np.argsort(sims)
-    low = int(relevant_idx[max(0, len(relevant_idx) // 3 - 1)])
-    mid = int(relevant_idx[len(relevant_idx) // 2])
-    high = int(relevant_idx[-1])
-    hints = [sentences[low], sentences[mid], sentences[high]]
+
+    # argsort gives indices sorted ascending (least→most relevant)
+    ranked_idx = np.argsort(sims)
+    n = len(ranked_idx)
+
+    # Pick three representative sentences: general, intermediate, specific
+    low_idx = int(ranked_idx[0])                    # least relevant → general clue
+    mid_idx = int(ranked_idx[n // 2])               # mid relevance → more specific
+    high_idx = int(ranked_idx[-1])                   # most relevant → near explicit
+
+    # Avoid showing the same sentence for multiple hints
+    used: set[int] = set()
+    hint_indices: list[int] = []
+    for idx in [low_idx, mid_idx, high_idx]:
+        if idx not in used:
+            hint_indices.append(idx)
+            used.add(idx)
+        else:
+            # Find next-best unused sentence
+            for fallback in ranked_idx:
+                if int(fallback) not in used:
+                    hint_indices.append(int(fallback))
+                    used.add(int(fallback))
+                    break
+
+    hints = [sentences[i] for i in hint_indices[:3]]
+
+    # Ensure Hint 3 is explicitly tied to the answer when possible
     answer_words = set(clean_text(correct_answer).split())
     if answer_words and not answer_words.intersection(clean_text(hints[-1]).split()):
-        hints[-1] = f"{hints[-1]} Focus on the answer phrase related to '{correct_answer}'."
-    return hints
+        hints[-1] = (
+            f"{hints[-1]} "
+            f"Focus on the part of the passage mentioning '{correct_answer}'."
+        )
+
+    # Pad to exactly 3 hints if the article had fewer than 3 distinct sentences
+    fallback_hints = [
+        "Review the main topic of the passage.",
+        f"Look for the sentence most closely related to the question.",
+        f"Focus on the part of the passage mentioning '{correct_answer}'.",
+    ]
+    while len(hints) < 3:
+        candidate = fallback_hints[len(hints)]
+        hints.append(candidate)
+
+    return hints[:3]
 
 
 def _sentence_features(sentence: str, question: str, correct_answer: str, position: int, total: int) -> list[float]:

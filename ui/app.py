@@ -209,20 +209,33 @@ def init_state() -> None:
         "answer_checked": False,
         "selected_option": None,
         "last_latency_ms": 0.0,
+        "race_question": None,   # populated when a RACE sample is loaded
+        "race_answer": None,     # correct answer text from the RACE sample
+        "race_options": None,    # original A/B/C/D options from the RACE sample
     }
     for key, value in defaults.items():
         st.session_state.setdefault(key, value)
 
 
 def load_random_sample() -> None:
-    """Load one random RACE test article into session state."""
+    """Load one random RACE test article into session state, including its question and answer."""
     path = os.path.join(ROOT_DIR, "data", "raw", "test.csv")
     try:
         df = pd.read_csv(path)
         sample = df.sample(1, random_state=np.random.default_rng().integers(0, 1_000_000)).iloc[0]
         st.session_state["article_text"] = str(sample["article"])
+        # Store the original question and correct answer so the pipeline uses them
+        answer_label = str(sample["answer"]).strip().upper()
+        st.session_state["race_question"] = str(sample["question"])
+        st.session_state["race_answer"] = str(sample[answer_label])
+        st.session_state["race_options"] = {
+            lbl: str(sample[lbl]) for lbl in ["A", "B", "C", "D"]
+        }
     except Exception as exc:
         st.error(f"Could not load test.csv sample. Place the RACE CSVs in data/raw first. Details: {exc}")
+        st.session_state.pop("race_question", None)
+        st.session_state.pop("race_answer", None)
+        st.session_state.pop("race_options", None)
 
 
 def sidebar_nav() -> None:
@@ -234,8 +247,12 @@ def sidebar_nav() -> None:
     selected = st.sidebar.radio("Navigation", screens, index=screens.index(current) if current in screens else 0)
     st.session_state["screen"] = selected
     if st.sidebar.button("Reset Session"):
-        for key in ["quiz_result", "attempts", "answer_checked", "selected_option"]:
-            st.session_state[key] = [] if key == "attempts" else None
+        for key in ["quiz_result", "attempts", "answer_checked", "selected_option",
+                    "race_question", "race_answer", "race_options"]:
+            if key == "attempts":
+                st.session_state[key] = []
+            else:
+                st.session_state[key] = None
         st.session_state["screen"] = "📄 Article Input"
         st.rerun()
 
@@ -271,11 +288,21 @@ def home_screen(engine: RaceInferenceEngine) -> None:
             return
         try:
             with st.spinner("Generating quiz..."):
-                st.session_state["quiz_result"] = engine.run_full_pipeline(article)
+                # If a RACE sample was loaded, pass its question and answer
+                race_q = st.session_state.get("race_question")
+                race_a = st.session_state.get("race_answer")
+                st.session_state["quiz_result"] = engine.run_full_pipeline(
+                    article,
+                    question=race_q,
+                    answer=race_a,
+                )
                 st.session_state["last_latency_ms"] = st.session_state["quiz_result"].get("inference_time_ms", 0.0)
                 st.session_state["hints_revealed"] = 1
                 st.session_state["answer_checked"] = False
                 st.session_state["selected_option"] = None
+                # Clear RACE-specific state after use
+                st.session_state["race_question"] = None
+                st.session_state["race_answer"] = None
                 st.session_state["screen"] = "❓ Quiz"
             st.rerun()
         except Exception as exc:

@@ -396,26 +396,129 @@ def _sentence_split(article: str) -> list[str]:
     return [s.strip() for s in re.split(r"(?<=[.!?])\s+", str(article)) if s.strip()]
 
 
+def _extract_subject_predicate(sentence: str) -> tuple[str, str]:
+    """Heuristically split a sentence into (subject, predicate).
+
+    The subject is taken as the first word (usually a proper noun or pronoun).
+    The predicate is everything that follows.
+
+    Args:
+        sentence: A declarative sentence (no trailing punctuation expected).
+
+    Returns:
+        (subject, predicate) pair; predicate may be empty for single-word input.
+    """
+    words = sentence.strip().split()
+    if not words:
+        return ("", sentence)
+    subject = words[0]
+    predicate = " ".join(words[1:]) if len(words) > 1 else ""
+    return subject, predicate
+
+
+def _to_base_form(verb: str) -> str:
+    """Approximate base form of a verb by stripping common inflections.
+
+    This is a simple rule-based approach (no NLP library required).
+
+    Args:
+        verb: An inflected verb string.
+
+    Returns:
+        Approximate base form.
+    """
+    # Common irregular endings handled first
+    irregulars = {
+        "visited": "visit", "borrowed": "borrow", "gave": "give",
+        "went": "go", "came": "come", "saw": "see", "read": "read",
+        "was": "be", "were": "be", "had": "have", "did": "do",
+        "got": "get", "took": "take", "made": "make", "said": "say",
+        "told": "tell", "found": "find", "left": "leave", "kept": "keep",
+    }
+    v = verb.lower()
+    if v in irregulars:
+        return irregulars[v]
+    # Strip -ed (visited → visit, borrowed → borrow)
+    if v.endswith("ed") and len(v) > 4:
+        # double consonant: stopped → stop
+        if len(v) > 5 and v[-3] == v[-4]:
+            return v[:-3]
+        return v[:-2]
+    # Strip -ing (visiting → visit)
+    if v.endswith("ing") and len(v) > 5:
+        return v[:-3]
+    # Strip -s (visits → visit)
+    if v.endswith("s") and len(v) > 3 and not v.endswith("ss"):
+        return v[:-1]
+    return v
+
+
 def _make_template(sentence: str) -> list[str]:
-    """Create Wh-word question candidates from a declarative sentence."""
+    """Create grammatically correct Wh-word questions from a declarative sentence.
+
+    FIX: Produces proper "What did [subject] [base-verb] ...?" constructions
+    instead of the broken "What [tail]?" pattern from the original.
+
+    Args:
+        sentence: A complete declarative sentence.
+
+    Returns:
+        List of candidate question strings (deduplicated).
+    """
     cleaned = sentence.strip().rstrip(".!?")
     words = cleaned.split()
     if not words:
         return []
+
+    subject, predicate = _extract_subject_predicate(cleaned)
+    pred_words = predicate.split()
     lowered = cleaned.lower()
-    tail = " ".join(words[1:]) if len(words) > 1 else cleaned
-    questions = [f"What {tail}?"]
-    person_refs = {"he", "she", "they", "mr", "mrs", "ms", "teacher", "student", "boy", "girl", "man", "woman"}
-    location_refs = {"school", "city", "room", "house", "park", "country", "village", "street", "library"}
-    time_refs = {"today", "yesterday", "tomorrow", "morning", "evening", "night", "year", "month", "day"}
     tokens = set(clean_text(lowered).split())
+
+    questions: list[str] = []
+
+    if pred_words:
+        base_verb = _to_base_form(pred_words[0])
+        rest = " ".join(pred_words[1:]) if len(pred_words) > 1 else ""
+        # "What did Sara visit after school?" / "What did Sara borrow?"
+        if rest:
+            questions.append(f"What did {subject} {base_verb} {rest}?")
+        else:
+            questions.append(f"What did {subject} {base_verb}?")
+    else:
+        questions.append(f"What is {subject}?")
+
+    person_refs = {
+        "he", "she", "they", "mr", "mrs", "ms", "teacher", "student",
+        "boy", "girl", "man", "woman", "her", "his", "their",
+    }
+    location_refs = {
+        "school", "city", "room", "house", "park", "country", "village",
+        "street", "library", "museum", "hospital", "store", "market",
+    }
+    time_refs = {
+        "today", "yesterday", "tomorrow", "morning", "evening", "night",
+        "year", "month", "day", "week", "monday", "tuesday", "wednesday",
+        "thursday", "friday", "saturday", "sunday",
+    }
+
     if tokens.intersection(person_refs):
-        questions.append(f"Who {tail}?")
+        if pred_words:
+            questions.append(f"Who {pred_words[0]} {' '.join(pred_words[1:])}?".strip())
     if tokens.intersection(location_refs):
-        questions.append(f"Where {tail}?")
+        questions.append(f"Where did {subject} go?")
     if tokens.intersection(time_refs):
-        questions.append(f"When {tail}?")
-    return questions
+        questions.append(f"When did {subject} do this?")
+
+    # Deduplicate preserving order
+    seen: set[str] = set()
+    unique: list[str] = []
+    for q in questions:
+        q = q.strip()
+        if q and q not in seen:
+            seen.add(q)
+            unique.append(q)
+    return unique
 
 
 def generate_questions(article: str, correct_answer: str) -> list[tuple[str, float]]:

@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import os
+import re
 import random
 import time
 from typing import Any, Optional
@@ -133,13 +134,23 @@ class RaceInferenceEngine:
     def generate_question(self, article: str) -> str:
         """Generate the best reading-comprehension question for a passage.
 
+        FIX: The seed answer used to be the first 8 raw words of the article,
+        which included stop words and made the cosine ranking meaningless.  We
+        now use the first complete sentence stripped of stop words so the
+        ranking picks the most informative sentence in the passage.
+
         Args:
             article: Passage text.
 
         Returns:
             Generated question string.
         """
-        seed_answer = " ".join(str(article).split()[:8]) or "the passage"
+        # Split into sentences and use the first sentence as seed
+        sentences = [s.strip() for s in re.split(r"(?<=[.!?])\s+", str(article)) if s.strip()]
+        if sentences:
+            seed_answer = sentences[0]
+        else:
+            seed_answer = " ".join(str(article).split()[:10]) or "the passage"
         return generate_questions(article, seed_answer)[0][0]
 
     def generate_distractors(self, article: str, question: str, correct_answer: str) -> list[str]:
@@ -175,42 +186,92 @@ class RaceInferenceEngine:
         return generate_hints(article, question, correct_answer)
 
     def _choose_demo_answer(self, article: str) -> str:
-        """Choose a simple answer phrase when no answer is supplied."""
-        sentences = [s.strip() for s in str(article).replace("?", ".").split(".") if s.strip()]
-        if not sentences:
-            return "the passage"
-        words = sentences[0].split()
-        return " ".join(words[: min(6, len(words))]) or "the passage"
+        """Choose a meaningful answer phrase when no answer is supplied.
 
-    def run_full_pipeline(self, article: str, question: Optional[str] = None, answer: Optional[str] = None) -> dict[str, Any]:
-        """Generate a full quiz package for the UI.
+        FIX: The original version returned the first few raw words of the
+        article (e.g. "Sara visited the library after") which are not useful
+        answer phrases.  We now pick the most frequent meaningful content word
+        from the first sentence, which is much more likely to be a plausible
+        answer target (proper noun, place, or key noun).
 
         Args:
             article: Passage text.
-            question: Optional existing question.
-            answer: Optional correct answer.
 
         Returns:
-            Dictionary with question, options, correct label, hints, confidence, and latency.
+            A short, meaningful answer phrase.
+        """
+        from sklearn.feature_extraction.text import ENGLISH_STOP_WORDS
+
+        sentences = [s.strip() for s in str(article).replace("?", ".").split(".") if s.strip()]
+        if not sentences:
+            return "the passage"
+
+        # Use the first sentence as the answer source
+        first = sentences[0]
+        # Pick content words (non-stop, len > 2)
+        words = [
+            w.strip(".,!?\"'")
+            for w in first.split()
+            if w.lower().strip(".,!?\"'") not in ENGLISH_STOP_WORDS
+            and len(w.strip(".,!?\"'")) > 2
+        ]
+        if words:
+            # Return the last meaningful word (often an object/location)
+            return words[-1]
+        return first.split()[0] if first.split() else "the passage"
+
+    def run_full_pipeline(
+        self,
+        article: str,
+        question: Optional[str] = None,
+        answer: Optional[str] = None,
+    ) -> dict[str, Any]:
+        """Generate a full quiz package for the UI.
+
+        FIX: The correct_answer is now title-cased to be visually consistent
+        with the distractor options (which are also title-cased by rank_distractors).
+        The shuffle seed is randomised per call so the correct answer does not
+        always land in the same slot.
+
+        Args:
+            article: Passage text.
+            question: Optional existing question (e.g. from RACE dataset).
+            answer: Optional correct answer (e.g. from RACE dataset).
+
+        Returns:
+            Dictionary with question, options, correct label, hints,
+            confidence, inference_time_ms, and demo_mode flag.
         """
         start = time.perf_counter()
         if not article or not article.strip():
             raise ValueError("Article text is required.")
+
         generated_question = question or self.generate_question(article)
         correct_answer = answer or self._choose_demo_answer(article)
+
+        # Normalise capitalisation so correct answer looks like an option
+        correct_answer_display = correct_answer.strip().title()
+
         distractors = self.generate_distractors(article, generated_question, correct_answer)
-        option_values = [correct_answer] + distractors
-        rng = random.Random(RANDOM_STATE)
+
+        option_values = [correct_answer_display] + distractors
+        # Use a time-based seed so the correct option is not always in slot A
+        rng = random.Random(int(time.perf_counter() * 1e6) % (2**31))
         rng.shuffle(option_values)
         labels = ["A", "B", "C", "D"]
         options = dict(zip(labels, option_values))
-        correct_label = next(label for label, value in options.items() if value == correct_answer)
+        correct_label = next(
+            label for label, value in options.items()
+            if value == correct_answer_display
+        )
+
         _, confidence = self.predict_correct_option(article, generated_question, options)
+
         return {
             "question": generated_question,
             "options": options,
             "correct": correct_label,
-            "correct_answer": correct_answer,
+            "correct_answer": correct_answer_display,
             "hints": self.generate_hints(article, generated_question, correct_answer),
             "confidence": confidence,
             "inference_time_ms": round((time.perf_counter() - start) * 1000, 2),
