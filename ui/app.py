@@ -33,131 +33,249 @@ def apply_theme() -> None:
     st.markdown(
         """
         <style>
+        @import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap');
+        
         :root {
-            --rc-bg: #f6f7fb;
-            --rc-panel: #ffffff;
-            --rc-ink: #18202f;
-            --rc-muted: #667085;
-            --rc-line: #d9dee8;
-            --rc-blue: #2563eb;
-            --rc-green: #15803d;
-            --rc-red: #b42318;
-            --rc-amber: #b45309;
+            --rc-bg: #0f172a;
+            --rc-panel: rgba(30, 41, 59, 0.7);
+            --rc-ink: #f8fafc;
+            --rc-muted: #94a3b8;
+            --rc-line: rgba(255, 255, 255, 0.1);
+            --rc-blue: #3b82f6;
+            --rc-blue-hover: #60a5fa;
+            --rc-green: #10b981;
+            --rc-red: #ef4444;
+            --rc-amber: #f59e0b;
         }
+        
+        /* Typography */
+        html, body, [class*="css"] {
+            font-family: 'Outfit', sans-serif !important;
+            color: var(--rc-ink) !important;
+        }
+        
+        .stApp {
+            background-color: var(--rc-bg);
+            background-image: 
+                radial-gradient(at 0% 0%, rgba(59, 130, 246, 0.15) 0px, transparent 50%),
+                radial-gradient(at 100% 100%, rgba(16, 185, 129, 0.1) 0px, transparent 50%);
+            background-attachment: fixed;
+        }
+        
         .main .block-container {
-            padding-top: 1.3rem;
-            padding-bottom: 3rem;
-            max-width: 1220px;
+            padding-top: 2rem;
+            padding-bottom: 4rem;
+            max-width: 1280px;
         }
+        
+        /* Sidebar styling */
         section[data-testid="stSidebar"] {
-            background: #101828;
+            background: rgba(15, 23, 42, 0.6) !important;
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            border-right: 1px solid var(--rc-line);
         }
-        section[data-testid="stSidebar"] * {
-            color: #f8fafc !important;
-        }
+        
+        /* Buttons */
         div[data-testid="stButton"] button {
-            border-radius: 8px;
-            border: 1px solid #c8d0df;
-            font-weight: 650;
-            min-height: 2.75rem;
+            border-radius: 12px;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            background: rgba(255, 255, 255, 0.05);
+            font-weight: 600;
+            min-height: 3rem;
+            transition: all 0.25s ease;
+            color: white !important;
+        }
+        div[data-testid="stButton"] button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+            border-color: rgba(255, 255, 255, 0.4);
+            background: rgba(255, 255, 255, 0.1);
         }
         div[data-testid="stButton"] button[kind="primary"] {
-            background: #2563eb;
-            border-color: #2563eb;
+            background: linear-gradient(135deg, #3b82f6, #2563eb);
+            border: none;
+            box-shadow: 0 4px 14px rgba(37, 99, 235, 0.4);
         }
+        div[data-testid="stButton"] button[kind="primary"]:hover {
+            background: linear-gradient(135deg, #60a5fa, #3b82f6);
+            box-shadow: 0 6px 20px rgba(37, 99, 235, 0.6);
+        }
+        
+        /* Hero Section */
         .rc-hero {
-            background: linear-gradient(135deg, #101828 0%, #1d4ed8 54%, #0f766e 100%);
-            border-radius: 8px;
-            padding: 28px 32px;
-            color: white;
-            margin-bottom: 18px;
-            box-shadow: 0 14px 34px rgba(16, 24, 40, 0.18);
+            background: rgba(30, 41, 59, 0.6);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border: 1px solid var(--rc-line);
+            border-radius: 16px;
+            padding: 40px 48px;
+            margin-bottom: 24px;
+            position: relative;
+            overflow: hidden;
+            box-shadow: 0 10px 30px -10px rgba(0,0,0,0.5);
+        }
+        .rc-hero::before {
+            content: '';
+            position: absolute;
+            top: 0; left: 0; right: 0;
+            height: 4px;
+            background: linear-gradient(90deg, #3b82f6, #10b981, #f59e0b);
         }
         .rc-hero h1 {
-            font-size: 2.3rem;
-            line-height: 1.05;
-            margin: 0 0 8px 0;
-            letter-spacing: 0;
+            font-size: 2.8rem;
+            font-weight: 700;
+            line-height: 1.1;
+            margin: 0 0 12px 0;
+            background: linear-gradient(to right, #ffffff, #94a3b8);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
         }
         .rc-hero p {
-            color: #dbeafe;
+            color: #cbd5e1;
             margin: 0;
-            max-width: 760px;
-            font-size: 1rem;
+            max-width: 800px;
+            font-size: 1.1rem;
+            font-weight: 300;
         }
+        
+        /* Cards & Panels */
         .rc-card {
-            background: white;
-            border: 1px solid #d9dee8;
-            border-radius: 8px;
-            padding: 18px;
-            box-shadow: 0 8px 22px rgba(16, 24, 40, 0.06);
+            background: var(--rc-panel);
+            backdrop-filter: blur(10px);
+            border: 1px solid var(--rc-line);
+            border-radius: 12px;
+            padding: 24px;
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
+        }
+        .rc-card:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 12px 24px rgba(0,0,0,0.3);
+            border-color: rgba(255, 255, 255, 0.2);
         }
         .rc-card h3 {
-            margin: 0 0 6px 0;
-            font-size: 1rem;
-            letter-spacing: 0;
-            color: #18202f;
+            margin: 0 0 8px 0;
+            font-size: 1.15rem;
+            font-weight: 600;
+            color: #f8fafc;
         }
         .rc-muted {
-            color: #667085;
-            font-size: 0.92rem;
+            color: var(--rc-muted);
+            font-size: 0.95rem;
+            line-height: 1.5;
         }
+        
+        /* Quiz Elements */
         .rc-question {
-            border-left: 5px solid #2563eb;
-            background: #eff6ff;
-            padding: 18px 20px;
-            border-radius: 8px;
-            color: #18202f;
-            font-size: 1.1rem;
-            font-weight: 700;
-            margin-bottom: 14px;
+            background: rgba(59, 130, 246, 0.1);
+            border-left: 4px solid #3b82f6;
+            padding: 20px 24px;
+            border-radius: 0 12px 12px 0;
+            color: #f8fafc;
+            font-size: 1.25rem;
+            font-weight: 600;
+            margin-bottom: 20px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
         }
         .rc-option {
-            border: 1px solid #d9dee8;
-            border-radius: 8px;
-            padding: 10px 12px;
-            margin-bottom: 8px;
-            background: #ffffff;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 10px;
+            padding: 14px 18px;
+            margin-bottom: 12px;
+            background: rgba(30, 41, 59, 0.4);
+            transition: all 0.2s ease;
+            font-size: 1.05rem;
         }
+        .rc-option:hover {
+            background: rgba(59, 130, 246, 0.1);
+            border-color: rgba(59, 130, 246, 0.4);
+        }
+        
+        /* KPIs */
         .rc-kpi {
-            background: white;
-            border: 1px solid #d9dee8;
-            border-radius: 8px;
-            padding: 14px 16px;
+            background: rgba(30, 41, 59, 0.5);
+            border: 1px solid var(--rc-line);
+            border-radius: 12px;
+            padding: 16px 20px;
+            backdrop-filter: blur(8px);
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
         }
         .rc-kpi .label {
-            color: #667085;
-            font-size: 0.82rem;
+            color: var(--rc-muted);
+            font-size: 0.85rem;
             text-transform: uppercase;
-            letter-spacing: 0.04em;
+            letter-spacing: 0.05em;
+            font-weight: 600;
         }
         .rc-kpi .value {
-            color: #18202f;
-            font-size: 1.45rem;
-            font-weight: 760;
-            margin-top: 4px;
+            color: #f8fafc;
+            font-size: 1.75rem;
+            font-weight: 700;
+            margin-top: 6px;
         }
+        
+        /* Elements */
         .rc-pill {
             display: inline-block;
-            padding: 5px 9px;
+            padding: 6px 12px;
             border-radius: 999px;
-            background: #eef2ff;
-            color: #1d4ed8;
-            border: 1px solid #c7d2fe;
-            font-size: 0.82rem;
-            font-weight: 650;
-            margin-right: 6px;
+            background: rgba(59, 130, 246, 0.1);
+            color: #60a5fa;
+            border: 1px solid rgba(59, 130, 246, 0.2);
+            font-size: 0.85rem;
+            font-weight: 600;
+            margin-right: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
         }
         .rc-warning {
-            border: 1px solid #fbbf24;
-            background: #fffbeb;
-            color: #78350f;
-            border-radius: 8px;
-            padding: 12px 14px;
-            margin-bottom: 14px;
+            border: 1px solid rgba(245, 158, 11, 0.3);
+            background: rgba(245, 158, 11, 0.1);
+            color: #fcd34d;
+            border-radius: 12px;
+            padding: 16px 20px;
+            margin-bottom: 20px;
+            font-weight: 500;
         }
-        textarea {
+        
+        /* Inputs */
+        textarea, input, .stSelectbox > div > div {
+            background: rgba(30, 41, 59, 0.6) !important;
+            border: 1px solid rgba(255, 255, 255, 0.1) !important;
+            border-radius: 12px !important;
+            color: #f8fafc !important;
+        }
+        textarea:focus, input:focus {
+            border-color: #3b82f6 !important;
+            box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.2) !important;
+        }
+        
+        /* Expander */
+        .streamlit-expanderHeader {
+            background: rgba(30, 41, 59, 0.4) !important;
             border-radius: 8px !important;
+        }
+        
+        /* Tabs */
+        .stTabs [data-baseweb="tab-list"] {
+            gap: 24px;
+            background: rgba(30, 41, 59, 0.4);
+            padding: 8px 16px;
+            border-radius: 12px;
+            border-bottom: 1px solid rgba(255,255,255,0.05);
+        }
+        .stTabs [data-baseweb="tab"] {
+            height: 48px;
+            white-space: pre-wrap;
+            background-color: transparent;
+            border-radius: 4px;
+            color: var(--rc-muted);
+            font-weight: 500;
+        }
+        .stTabs [aria-selected="true"] {
+            color: white !important;
+            border-bottom: 2px solid #3b82f6 !important;
         }
         </style>
         """,
@@ -217,11 +335,17 @@ def init_state() -> None:
         st.session_state.setdefault(key, value)
 
 
+@st.cache_data
+def _load_test_csv(path: str) -> pd.DataFrame:
+    """Load the RACE test dataset with caching to avoid huge delays."""
+    return pd.read_csv(path)
+
+
 def load_random_sample() -> None:
     """Load one random RACE test article into session state, including its question and answer."""
     path = os.path.join(ROOT_DIR, "data", "raw", "test.csv")
     try:
-        df = pd.read_csv(path)
+        df = _load_test_csv(path)
         sample = df.sample(1, random_state=np.random.default_rng().integers(0, 1_000_000)).iloc[0]
         st.session_state["article_text"] = str(sample["article"])
         # Store the original question and correct answer so the pipeline uses them
@@ -241,11 +365,13 @@ def load_random_sample() -> None:
 def sidebar_nav() -> None:
     """Render sidebar navigation and synchronize the selected screen."""
     screens = ["📄 Article Input", "❓ Quiz", "💡 Hints", "📊 Analytics"]
-    st.sidebar.markdown("## RACE Quiz AI")
+    st.sidebar.markdown("<h2 style='margin-bottom: 0;'>🧠 RACE Quiz AI</h2>", unsafe_allow_html=True)
     st.sidebar.caption("Traditional ML reading comprehension lab")
+    st.sidebar.markdown("<br>", unsafe_allow_html=True)
     current = st.session_state.get("screen", screens[0])
-    selected = st.sidebar.radio("Navigation", screens, index=screens.index(current) if current in screens else 0)
+    selected = st.sidebar.radio("Navigation", screens, index=screens.index(current) if current in screens else 0, label_visibility="collapsed")
     st.session_state["screen"] = selected
+    st.sidebar.markdown("<br><br>", unsafe_allow_html=True)
     if st.sidebar.button("Reset Session"):
         for key in ["quiz_result", "attempts", "answer_checked", "selected_option",
                     "race_question", "race_answer", "race_options"]:
@@ -254,7 +380,6 @@ def sidebar_nav() -> None:
             else:
                 st.session_state[key] = None
         st.session_state["screen"] = "📄 Article Input"
-        st.rerun()
 
 
 def home_screen(engine: RaceInferenceEngine) -> None:
@@ -272,41 +397,47 @@ def home_screen(engine: RaceInferenceEngine) -> None:
         info_card("Model B", "Distractor ranking, diversity checks, and graduated hint generation.")
     with c3:
         info_card("Evaluation", "Session logs, confusion matrix, metric cards, and exportable attempts.")
-    left, right = st.columns([3, 1])
+    st.markdown("<br>", unsafe_allow_html=True)
+    left, right = st.columns([2.5, 1], gap="large")
     with left:
-        article = st.text_area("Paste a reading passage", key="article_text", height=300)
+        st.markdown("<h3 style='margin-bottom: 12px;'>Reading Passage</h3>", unsafe_allow_html=True)
+        article = st.text_area("Paste a reading passage", key="article_text", height=320, label_visibility="collapsed")
+        
+        st.markdown("<br>", unsafe_allow_html=True)
+        if st.button("Generate Quiz", type="primary", use_container_width=True):
+            if not article.strip():
+                st.warning("Paste or load an article before generating a quiz.")
+                return
+            try:
+                with st.spinner("Generating quiz..."):
+                    # If a RACE sample was loaded, pass its question and answer
+                    race_q = st.session_state.get("race_question")
+                    race_a = st.session_state.get("race_answer")
+                    st.session_state["quiz_result"] = engine.run_full_pipeline(
+                        article,
+                        question=race_q,
+                        answer=race_a,
+                    )
+                    st.session_state["last_latency_ms"] = st.session_state["quiz_result"].get("inference_time_ms", 0.0)
+                    st.session_state["hints_revealed"] = 1
+                    st.session_state["answer_checked"] = False
+                    st.session_state["selected_option"] = None
+                    # Clear RACE-specific state after use
+                    st.session_state["race_question"] = None
+                    st.session_state["race_answer"] = None
+                    st.session_state["screen"] = "❓ Quiz"
+                st.rerun()
+            except Exception as exc:
+                st.error(f"Quiz generation failed: {exc}")
+
     with right:
-        st.markdown("### Passage Tools")
+        st.markdown("<h3 style='margin-bottom: 12px;'>Passage Tools</h3>", unsafe_allow_html=True)
         kpi_card("Words", str(len(article.split()) if article else 0))
+        st.markdown("<div style='margin-bottom: 12px;'></div>", unsafe_allow_html=True)
         kpi_card("Characters", str(len(article) if article else 0))
-        if st.button("Load Random RACE Sample"):
-            load_random_sample()
-            st.rerun()
-    if st.button("Generate Quiz", type="primary"):
-        if not article.strip():
-            st.warning("Paste or load an article before generating a quiz.")
-            return
-        try:
-            with st.spinner("Generating quiz..."):
-                # If a RACE sample was loaded, pass its question and answer
-                race_q = st.session_state.get("race_question")
-                race_a = st.session_state.get("race_answer")
-                st.session_state["quiz_result"] = engine.run_full_pipeline(
-                    article,
-                    question=race_q,
-                    answer=race_a,
-                )
-                st.session_state["last_latency_ms"] = st.session_state["quiz_result"].get("inference_time_ms", 0.0)
-                st.session_state["hints_revealed"] = 1
-                st.session_state["answer_checked"] = False
-                st.session_state["selected_option"] = None
-                # Clear RACE-specific state after use
-                st.session_state["race_question"] = None
-                st.session_state["race_answer"] = None
-                st.session_state["screen"] = "❓ Quiz"
-            st.rerun()
-        except Exception as exc:
-            st.error(f"Quiz generation failed: {exc}")
+        st.markdown("<div style='margin-bottom: 24px;'></div>", unsafe_allow_html=True)
+        st.button("Load Random RACE Sample", on_click=load_random_sample, use_container_width=True)
+    # Removed the standalone Generate Quiz button since it was moved inside the left column.
 
 
 def quiz_screen(engine: RaceInferenceEngine) -> None:
@@ -329,9 +460,10 @@ def quiz_screen(engine: RaceInferenceEngine) -> None:
         format_func=lambda label: f"{label}. {result['options'][label]}",
         key="selected_option",
     )
-    col1, col2, col3 = st.columns(3)
+    st.markdown("<br>", unsafe_allow_html=True)
+    col1, col2, col3 = st.columns(3, gap="medium")
     with col1:
-        if st.button("Check My Answer", type="primary"):
+        if st.button("Check My Answer", type="primary", use_container_width=True):
             correct = selected == result["correct"]
             row = {
                 "article_snippet": st.session_state.get("article_text", "")[:120],
@@ -344,11 +476,11 @@ def quiz_screen(engine: RaceInferenceEngine) -> None:
             st.session_state["attempts"].append(row)
             st.session_state["answer_checked"] = True
     with col2:
-        if st.button("Get Hints"):
+        if st.button("Get Hints", width="stretch"):
             st.session_state["screen"] = "💡 Hints"
             st.rerun()
     with col3:
-        if st.button("Try Another Question"):
+        if st.button("Try Another Question", width="stretch"):
             st.session_state["screen"] = "📄 Article Input"
             st.session_state["quiz_result"] = None
             st.rerun()
@@ -358,7 +490,9 @@ def quiz_screen(engine: RaceInferenceEngine) -> None:
         else:
             hint = result.get("hints", ["Review the passage."])[0]
             st.error(f"Not quite. Correct answer: {result['correct']}. {result['options'][result['correct']]}. Hint: {hint}")
-    metric_cols = st.columns(3)
+    
+    st.markdown("<br><br>", unsafe_allow_html=True)
+    metric_cols = st.columns(3, gap="large")
     with metric_cols[0]:
         kpi_card("Model Confidence", f"{float(result.get('confidence', 0.0)):.2f}")
     with metric_cols[1]:
@@ -374,7 +508,9 @@ def hints_screen() -> None:
     if not result:
         st.info("Generate a quiz first.")
         return
+    st.markdown("<br>", unsafe_allow_html=True)
     hero("Hint Panel", "Reveal support gradually before showing the final answer.")
+    st.markdown("<br>", unsafe_allow_html=True)
     with st.expander("Passage", expanded=False):
         st.write(st.session_state.get("article_text", ""))
     hints = result.get("hints", ["Review the main idea.", "Find the sentence related to the question.", "Look near the answer phrase."])
@@ -424,34 +560,73 @@ def analytics_screen(engine: RaceInferenceEngine) -> None:
         metrics_df = model_a_results.get("metrics") if isinstance(model_a_results, dict) else None
         if isinstance(metrics_df, pd.DataFrame) and not metrics_df.empty:
             best = metrics_df.sort_values("macro_f1", ascending=False).iloc[0]
-            cols = st.columns(4)
+            st.markdown("#### Top Model (by Macro F1)")
+            cols = st.columns(5)
+            
+            def _fmt_kpi(val: Any) -> str:
+                if pd.isna(val):
+                    return "N/A"
+                return f"{val:.3f}"
+                
             with cols[0]:
-                kpi_card("Accuracy", f"{best.get('accuracy', 0):.3f}")
+                kpi_card("Accuracy", _fmt_kpi(best.get('accuracy', 0)))
             with cols[1]:
-                kpi_card("Macro F1", f"{best.get('macro_f1', 0):.3f}")
+                kpi_card("Macro F1", _fmt_kpi(best.get('macro_f1', 0)))
             with cols[2]:
-                kpi_card("Precision", f"{best.get('precision', best.get('accuracy', 0)):.3f}")
+                kpi_card("ROC AUC", _fmt_kpi(best.get('roc_auc', 0)))
             with cols[3]:
-                kpi_card("Recall", f"{best.get('recall', best.get('accuracy', 0)):.3f}")
+                kpi_card("PR AUC", _fmt_kpi(best.get('pr_auc', 0)))
+            with cols[4]:
+                kpi_card("Brier Score", _fmt_kpi(best.get('brier_score', 0)))
+            
+            st.markdown("<br>", unsafe_allow_html=True)
             cm = model_a_results.get("confusion_matrix", np.asarray([[0, 0], [0, 0]]))
             st.pyplot(plot_confusion_matrix(cm, ["Wrong", "Correct"], "Model A Confusion Matrix"))
+            
             chart_df = metrics_df[metrics_df["model"].astype(str).str.contains("Logistic|SVC|NB|Ensemble", case=False, regex=True)]
-            st.plotly_chart(px.bar(chart_df, x="model", y="macro_f1", title="LR vs SVM vs NB vs Ensemble"), use_container_width=True)
+            st.plotly_chart(px.bar(chart_df, x="model", y=["macro_f1", "roc_auc"], barmode="group", title="Model Comparisons"), use_container_width=True)
+        
+            nlp_df = model_a_results.get("nlp_metrics")
+            if isinstance(nlp_df, dict) and nlp_df:
+                st.markdown("#### Generation Metrics (NLP)")
+                nlp_cols = st.columns(3)
+                with nlp_cols[0]:
+                    kpi_card("BLEU", f"{nlp_df.get('question_bleu', 0):.3f}")
+                with nlp_cols[1]:
+                    kpi_card("ROUGE-L", f"{nlp_df.get('question_rouge', 0):.3f}")
+                with nlp_cols[2]:
+                    kpi_card("METEOR", f"{nlp_df.get('question_meteor', 0):.3f}")
+            st.markdown("<br>", unsafe_allow_html=True)
+            
         else:
             st.warning("Model A results not found. Train Model A to populate this dashboard.")
         latencies = [a.get("latency_ms", 0) for a in st.session_state.get("attempts", []) if "latency_ms" in a]
-        st.metric("Average inference latency", f"{np.mean(latencies) if latencies else 0:.1f} ms")
+        latency_str = f"{np.mean(latencies):.1f} ms" if latencies else "No data yet"
+        st.metric("Average inference latency", latency_str)
     with tabs[1]:
         if isinstance(model_b_results, dict) and model_b_results:
-            cols = st.columns(4)
+            cols = st.columns(5)
             with cols[0]:
-                kpi_card("Distractor Precision", f"{model_b_results.get('distractor_precision', 0):.3f}")
+                kpi_card("Ranker Acc", f"{model_b_results.get('distractor_ranker_accuracy', 0):.3f}")
             with cols[1]:
-                kpi_card("Distractor Recall", f"{model_b_results.get('distractor_recall', 0):.3f}")
+                kpi_card("Dist F1", f"{model_b_results.get('distractor_f1', 0):.3f}")
             with cols[2]:
-                kpi_card("Distractor F1", f"{model_b_results.get('distractor_f1', 0):.3f}")
+                kpi_card("Dist Jaccard", f"{model_b_results.get('distractor_jaccard', 0):.3f}")
             with cols[3]:
-                kpi_card("Ranker Accuracy", f"{model_b_results.get('distractor_ranker_accuracy', 0):.3f}")
+                kpi_card("Hit Rate@3", f"{model_b_results.get('distractor_hit_rate_at_3', 0):.3f}")
+            with cols[4]:
+                kpi_card("Diversity", f"{model_b_results.get('pairwise_cosine_diversity', 0):.3f}")
+                
+            st.markdown("#### Distractor Generation (NLP)")
+            nlp_cols2 = st.columns(3)
+            with nlp_cols2[0]:
+                kpi_card("BLEU", f"{model_b_results.get('distractor_bleu', 0):.3f}")
+            with nlp_cols2[1]:
+                kpi_card("ROUGE-L", f"{model_b_results.get('distractor_rougeL', 0):.3f}")
+            with nlp_cols2[2]:
+                kpi_card("METEOR", f"{model_b_results.get('distractor_meteor', 0):.3f}")
+                
+            st.markdown("<br>", unsafe_allow_html=True)
             hint_df = pd.DataFrame({"K": ["P@1", "P@2", "P@3"], "Precision": [0.0, 0.0, model_b_results.get("hint_precision_at_k", 0)]})
             st.plotly_chart(px.bar(hint_df, x="K", y="Precision", title="Hint Precision@K"), use_container_width=True)
         else:

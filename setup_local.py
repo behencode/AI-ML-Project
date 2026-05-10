@@ -14,6 +14,16 @@ from setup_colab import (
     split_single_csv,
     verify_csvs,
 )
+import sys
+
+
+def check_venv() -> bool:
+    """Check if the script is running inside a virtual environment.
+
+    Returns:
+        True if in a venv, otherwise False.
+    """
+    return sys.prefix != sys.base_prefix
 
 
 def main() -> None:
@@ -25,6 +35,14 @@ def main() -> None:
     parser.add_argument("--skip-download", action="store_true", help="Do not download from Kaggle.")
     parser.add_argument("--force-resplit", action="store_true", help="Overwrite train/val/test with a fresh 80/10/10 split.")
     args = parser.parse_args()
+
+    if not check_venv() and not args.skip_install:
+        print("Error: You are not in a virtual environment.")
+        print("To fix this, run:")
+        print("  source venv/bin/activate  # macOS/Linux")
+        print("  .\\venv\\Scripts\\activate  # Windows")
+        print("\nIf you want to continue anyway, use --skip-install.")
+        sys.exit(1)
 
     create_directories()
     if not args.skip_install:

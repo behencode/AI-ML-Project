@@ -21,6 +21,9 @@ from sklearn.metrics import (
     precision_score,
     r2_score,
     recall_score,
+    roc_auc_score,
+    average_precision_score,
+    brier_score_loss,
 )
 
 
@@ -49,6 +52,19 @@ def compute_all_metrics(y_true: np.ndarray, y_pred: np.ndarray, y_proba: Optiona
         "rmse": float(np.sqrt(mean_squared_error(y_true_arr.astype(float), score_values.astype(float)))),
         "mae": mean_absolute_error(y_true_arr.astype(float), score_values.astype(float)),
     }
+    if y_proba is not None:
+        try:
+            metrics["roc_auc"] = roc_auc_score(y_true_arr, y_proba)
+            metrics["pr_auc"] = average_precision_score(y_true_arr, y_proba)
+            metrics["brier_score"] = brier_score_loss(y_true_arr, y_proba)
+        except Exception:
+            metrics["roc_auc"] = 0.0
+            metrics["pr_auc"] = 0.0
+            metrics["brier_score"] = 0.0
+    else:
+        metrics["roc_auc"] = 0.0
+        metrics["pr_auc"] = 0.0
+        metrics["brier_score"] = 0.0
     try:
         metrics["r2"] = r2_score(y_true_arr.astype(float), score_values.astype(float))
     except Exception:

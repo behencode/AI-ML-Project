@@ -19,8 +19,10 @@ from sklearn.metrics.pairwise import cosine_similarity
 
 try:
     from preprocessing import build_ohe_vectorizer, clean_text
+    import nlp_metrics
 except ImportError:  # pragma: no cover
     from .preprocessing import build_ohe_vectorizer, clean_text
+    from . import nlp_metrics
 
 RANDOM_STATE = 42
 
@@ -371,9 +373,14 @@ def evaluate_model_b(df: pd.DataFrame, vectorizer: Optional[CountVectorizer], ma
     precisions: list[float] = []
     recalls: list[float] = []
     f1s: list[float] = []
+    jaccards: list[float] = []
+    hit_rates: list[int] = []
     top1_ok: list[int] = []
     hint_hits: list[int] = []
     diversities: list[float] = []
+    bleus: list[float] = []
+    rouges: list[float] = []
+    meteors: list[float] = []
     rows = df.head(max_rows)
     print(f"Evaluating distractors and hints on {len(rows)} validation rows...")
     for idx, row in enumerate(rows.itertuples(index=False), start=1):
@@ -390,20 +397,38 @@ def evaluate_model_b(df: pd.DataFrame, vectorizer: Optional[CountVectorizer], ma
         precision = len(intersection) / max(1, len(pred_set))
         recall = len(intersection) / max(1, len(gold_wrong))
         f1 = 2 * precision * recall / max(1e-9, precision + recall)
+        jaccard = len(intersection) / max(1, len(pred_set.union(gold_wrong)))
+        hit_rate = int(len(intersection) > 0)
+        
         precisions.append(precision)
         recalls.append(recall)
         f1s.append(f1)
+        jaccards.append(jaccard)
+        hit_rates.append(hit_rate)
         top1_ok.append(int(bool(distractors) and clean_text(distractors[0]) != clean_text(correct)))
         hints = generate_hints(str(getattr(row, "article")), str(getattr(row, "question")), correct)
         hint_hits.append(int(any(_overlap(hint, correct) > 0 for hint in hints)))
         diversities.append(pairwise_cosine_diversity(distractors))
+        
+        # NLP metrics for distractors
+        gold_str = " ".join(gold_wrong)
+        pred_str = " ".join(distractors)
+        bleus.append(nlp_metrics.compute_bleu(gold_str, pred_str))
+        rouges.append(nlp_metrics.compute_rouge(gold_str, pred_str))
+        meteors.append(nlp_metrics.compute_meteor(gold_str, pred_str))
+        
     metrics = {
         "distractor_precision": float(np.mean(precisions)) if precisions else 0.0,
         "distractor_recall": float(np.mean(recalls)) if recalls else 0.0,
         "distractor_f1": float(np.mean(f1s)) if f1s else 0.0,
+        "distractor_jaccard": float(np.mean(jaccards)) if jaccards else 0.0,
+        "distractor_hit_rate_at_3": float(np.mean(hit_rates)) if hit_rates else 0.0,
         "distractor_ranker_accuracy": float(np.mean(top1_ok)) if top1_ok else 0.0,
         "hint_precision_at_k": float(np.mean(hint_hits)) if hint_hits else 0.0,
         "pairwise_cosine_diversity": float(np.mean(diversities)) if diversities else 0.0,
+        "distractor_bleu": float(np.mean(bleus)) if bleus else 0.0,
+        "distractor_rougeL": float(np.mean(rouges)) if rouges else 0.0,
+        "distractor_meteor": float(np.mean(meteors)) if meteors else 0.0,
     }
     return metrics
 

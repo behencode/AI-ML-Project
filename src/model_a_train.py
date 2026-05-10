@@ -18,7 +18,7 @@ from sklearn.cluster import KMeans
 from sklearn.decomposition import TruncatedSVD
 from sklearn.ensemble import StackingClassifier
 from sklearn.linear_model import LogisticRegression
-from sklearn.metrics import accuracy_score, classification_report, confusion_matrix, f1_score, precision_score, recall_score, silhouette_score
+from sklearn.metrics import accuracy_score, classification_report, confusion_matrix, f1_score, precision_score, recall_score, silhouette_score, roc_auc_score, average_precision_score, brier_score_loss
 from sklearn.mixture import GaussianMixture
 from sklearn.model_selection import train_test_split
 from sklearn.naive_bayes import ComplementNB
@@ -34,8 +34,10 @@ except Exception:  # pragma: no cover - optional dependency path
 
 try:
     from preprocessing import build_ohe_vectorizer, clean_text, extract_lexical_features
+    import nlp_metrics
 except ImportError:  # pragma: no cover
     from .preprocessing import build_ohe_vectorizer, clean_text, extract_lexical_features
+    from . import nlp_metrics
 
 RANDOM_STATE = 42
 
@@ -88,6 +90,19 @@ def evaluate_binary_model(name: str, y_true: np.ndarray, y_pred: np.ndarray, y_p
     }
     if y_proba is not None:
         metrics["avg_positive_probability"] = float(np.mean(y_proba))
+        try:
+            metrics["roc_auc"] = float(roc_auc_score(y_true, y_proba))
+            metrics["pr_auc"] = float(average_precision_score(y_true, y_proba))
+            metrics["brier_score"] = float(brier_score_loss(y_true, y_proba))
+        except Exception:
+            metrics["roc_auc"] = 0.0
+            metrics["pr_auc"] = 0.0
+            metrics["brier_score"] = 0.0
+    else:
+        metrics["roc_auc"] = 0.0
+        metrics["pr_auc"] = 0.0
+        metrics["brier_score"] = 0.0
+        
     print(f"\n{name}")
     print(
         f"Accuracy: {metrics['accuracy']:.4f} | Macro F1: {metrics['macro_f1']:.4f} | "
@@ -586,15 +601,49 @@ def train_all(data_dir: str, model_dir: str, skip_slow: bool = False) -> pd.Data
         if xgb is not None:
             xgb_proba = xgb.predict_proba(data["X_val"])[:, 1]
             extra_metrics.append(evaluate_binary_model("XGBoost Optional", data["y_val"], (xgb_proba >= 0.5).astype(int), xgb_proba))
-        run_unsupervised_models(data["X_train"], data["X_val"], data["y_val"], model_dir)
-        run_semi_supervised(data["X_train"], data["y_train"], data["X_val"], data["y_val"], lr_metrics["macro_f1"], model_dir)
+        unsup_metrics = run_unsupervised_models(data["X_train"], data["X_val"], data["y_val"], model_dir)
+        semi_metrics = run_semi_supervised(data["X_train"], data["y_train"], data["X_val"], data["y_val"], lr_metrics["macro_f1"], model_dir)
+    else:
+        unsup_metrics, semi_metrics = {}, {}
+
+    print("\nEvaluating generated questions for NLP metrics...")
+    val_csv_path = os.path.join("data", "raw", "val.csv")
+    q_bleus, q_rouges, q_meteors = [], [], []
+    if os.path.exists(val_csv_path):
+        val_df = pd.read_csv(val_csv_path).head(100) # subset for speed
+        for _, row in val_df.iterrows():
+            article = str(row.get("article", ""))
+            gold_q = str(row.get("question", ""))
+            if article and gold_q:
+                # generate question based on first sentence as seed
+                sentences = [s.strip() for s in re.split(r"(?<=[.!?])\s+", article) if s.strip()]
+                seed = sentences[0] if sentences else article
+                gen_q_list = generate_questions(article, seed)
+                gen_q = gen_q_list[0][0] if gen_q_list else ""
+                
+                q_bleus.append(nlp_metrics.compute_bleu(gold_q, gen_q))
+                q_rouges.append(nlp_metrics.compute_rouge(gold_q, gen_q))
+                q_meteors.append(nlp_metrics.compute_meteor(gold_q, gen_q))
+    
+    nlp_eval = {
+        "question_bleu": float(np.mean(q_bleus)) if q_bleus else 0.0,
+        "question_rouge": float(np.mean(q_rouges)) if q_rouges else 0.0,
+        "question_meteor": float(np.mean(q_meteors)) if q_meteors else 0.0,
+    }
 
     models = [lr_metrics, svm_metrics, hard_metrics, soft_metrics, nb_bundle["metrics"], *extra_metrics]
     table = pd.DataFrame([{k: v for k, v in row.items() if k != "confusion_matrix"} for row in models])
     table["training_wall_seconds"] = round(time.time() - start, 2)
     os.makedirs(os.path.join(model_dir), exist_ok=True)
     try:
-        joblib.dump({"metrics": table, "confusion_matrix": soft_metrics["confusion_matrix"]}, os.path.join(model_dir, "results.pkl"))
+        joblib.dump({
+            "metrics": table,
+            "confusion_matrix": soft_metrics["confusion_matrix"],
+            "nlp_metrics": nlp_eval,
+            "unsupervised_metrics": unsup_metrics,
+            "semi_supervised_metrics": semi_metrics
+        }, os.path.join(model_dir, "results.pkl"))
+
         table.to_csv(os.path.join(model_dir, "comparison.csv"), index=False)
     except Exception as exc:
         raise RuntimeError(f"Failed to save Model A results: {exc}") from exc

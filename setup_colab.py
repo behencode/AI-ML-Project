@@ -11,7 +11,7 @@ import sys
 import zipfile
 from typing import Iterable
 
-import pandas as pd
+
 
 DEFAULT_DATASET_SLUG = "ankitdhiman7/race-dataset"
 RANDOM_STATE = 42
@@ -84,6 +84,10 @@ def configure_kaggle(kaggle_json_path: str = "kaggle.json", access_token_path: s
         True if credentials were configured, otherwise False.
     """
     kaggle_dir = os.path.expanduser(os.path.join("~", ".kaggle"))
+    if "/root" in kaggle_dir and os.name != "nt" and os.getuid() != 0:
+        # Safety fallback for misconfigured environments or relocated venvs
+        kaggle_dir = os.path.join(os.getcwd(), ".kaggle")
+        print(f"Warning: ~ expansion failed or pointed to /root. Using local directory: {kaggle_dir}")
     os.makedirs(kaggle_dir, exist_ok=True)
     json_target = os.path.join(kaggle_dir, "kaggle.json")
     token_target = os.path.join(kaggle_dir, "access_token")
@@ -129,6 +133,7 @@ def _normalize_columns(df: pd.DataFrame) -> pd.DataFrame:
     Returns:
         DataFrame with canonical columns where possible.
     """
+    import pandas as pd
     normalized = df.copy()
     normalized.columns = [str(col).strip() for col in normalized.columns]
     lower_to_original = {col.lower(): col for col in normalized.columns}
@@ -211,6 +216,7 @@ def split_single_csv(raw_dir: str = os.path.join("data", "raw"), source_csv: str
     Returns:
         None.
     """
+    import pandas as pd
     if _has_split_csvs(raw_dir) and not force:
         print("train.csv, val.csv, and test.csv already exist; skipping 80/10/10 split.")
         return
@@ -266,7 +272,15 @@ def download_race_dataset(dataset_slug: str = DEFAULT_DATASET_SLUG, raw_dir: str
     if not dataset_slug:
         print("No Kaggle dataset slug supplied. Place one RACE CSV in data/raw or pass --source-csv.")
         return
-    run_command(["kaggle", "datasets", "download", "-d", dataset_slug, "-p", raw_dir])
+    
+    # Use the kaggle binary from the same directory as the current python executable
+    kaggle_bin = "kaggle"
+    python_dir = os.path.dirname(sys.executable)
+    local_kaggle = os.path.join(python_dir, "kaggle")
+    if os.path.exists(local_kaggle):
+        kaggle_bin = local_kaggle
+        
+    run_command([kaggle_bin, "datasets", "download", "-d", dataset_slug, "-p", raw_dir])
     for zip_path in glob.glob(os.path.join(raw_dir, "*.zip")):
         try:
             with zipfile.ZipFile(zip_path, "r") as zip_ref:
@@ -286,6 +300,7 @@ def verify_csvs(raw_dir: str = os.path.join("data", "raw")) -> None:
     Returns:
         None.
     """
+    import pandas as pd
     required = {"id", "article", "question", "A", "B", "C", "D", "answer"}
     for split in ["train", "val", "test"]:
         path = os.path.join(raw_dir, f"{split}.csv")
