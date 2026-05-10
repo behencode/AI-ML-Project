@@ -16,6 +16,7 @@ from sklearn.feature_extraction.text import CountVectorizer, ENGLISH_STOP_WORDS
 from sklearn.linear_model import LogisticRegression
 from sklearn.metrics import f1_score, precision_score, r2_score, recall_score
 from sklearn.metrics.pairwise import cosine_similarity
+from evaluate import compute_generation_metrics
 
 try:
     from preprocessing import build_ohe_vectorizer, clean_text
@@ -374,6 +375,9 @@ def evaluate_model_b(df: pd.DataFrame, vectorizer: Optional[CountVectorizer], ma
     top1_ok: list[int] = []
     hint_hits: list[int] = []
     diversities: list[float] = []
+    # For generation metrics
+    distr_refs: list[list[str]] = []
+    distr_cands: list[str] = []
     rows = df.head(max_rows)
     print(f"Evaluating distractors and hints on {len(rows)} validation rows...")
     for idx, row in enumerate(rows.itertuples(index=False), start=1):
@@ -386,6 +390,11 @@ def evaluate_model_b(df: pd.DataFrame, vectorizer: Optional[CountVectorizer], ma
         candidates.extend(frequency_based_substitution(str(getattr(row, "article")), correct))
         distractors = rank_distractors(candidates, correct, vectorizer, top_k=3)
         pred_set = {clean_text(d) for d in distractors}
+        # collect for generation metrics: references are the gold wrong options
+        gold_wrong_list = [str(getattr(row, lbl)) for lbl in ["A", "B", "C", "D"] if lbl != answer_label]
+        distr_refs.append([clean_text(g) for g in gold_wrong_list])
+        # join predicted distractors into a single string per-row for candidate comparison
+        distr_cands.append(" ; ".join(distractors))
         intersection = pred_set.intersection(gold_wrong)
         precision = len(intersection) / max(1, len(pred_set))
         recall = len(intersection) / max(1, len(gold_wrong))
@@ -405,6 +414,12 @@ def evaluate_model_b(df: pd.DataFrame, vectorizer: Optional[CountVectorizer], ma
         "hint_precision_at_k": float(np.mean(hint_hits)) if hint_hits else 0.0,
         "pairwise_cosine_diversity": float(np.mean(diversities)) if diversities else 0.0,
     }
+    # Compute generation metrics (BLEU/ROUGE/METEOR) for distractors
+    try:
+        gen = compute_generation_metrics(distr_refs, distr_cands)
+        metrics.update({"distractor_bleu": gen.get("bleu", 0.0), "distractor_rouge_l": gen.get("rouge_l", 0.0), "distractor_meteor": gen.get("meteor", 0.0)})
+    except Exception:
+        metrics.update({"distractor_bleu": 0.0, "distractor_rouge_l": 0.0, "distractor_meteor": 0.0})
     return metrics
 
 

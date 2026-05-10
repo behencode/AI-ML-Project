@@ -22,6 +22,9 @@ from sklearn.metrics import (
     r2_score,
     recall_score,
 )
+from nltk.translate.bleu_score import sentence_bleu, SmoothingFunction
+from nltk.translate.meteor_score import meteor_score
+from rouge_score import rouge_scorer
 
 
 def compute_all_metrics(y_true: np.ndarray, y_pred: np.ndarray, y_proba: Optional[np.ndarray] = None) -> dict[str, Any]:
@@ -123,6 +126,45 @@ def benchmark_all_models(data_dir: str = os.path.join("data", "processed"), mode
         raise RuntimeError(f"Failed to save benchmark CSV: {exc}") from exc
     print(result.to_string(index=False) if not result.empty else "No models found to benchmark.")
     return result
+
+
+def compute_generation_metrics(references: list[list[str]], candidates: list[str]) -> dict[str, float]:
+    """Compute BLEU, ROUGE-L and METEOR between candidate strings and reference sets.
+
+    Args:
+        references: List of reference lists (each inner list are acceptable references for a sample).
+        candidates: List of candidate strings.
+
+    Returns:
+        Dict with average BLEU, ROUGE-L F1, and METEOR scores.
+    """
+    if not candidates:
+        return {"bleu": 0.0, "rouge_l": 0.0, "meteor": 0.0}
+    smoothie = SmoothingFunction().method4
+    rouge = rouge_scorer.RougeScorer(["rougeL"], use_stemmer=True)
+    blues = []
+    rouges = []
+    meteors = []
+    for refs, cand in zip(references, candidates):
+        # Prepare token lists for BLEU
+        ref_tokens = [r.split() for r in refs if r]
+        cand_tokens = cand.split()
+        try:
+            b = sentence_bleu(ref_tokens, cand_tokens, smoothing_function=smoothie)
+        except Exception:
+            b = 0.0
+        try:
+            m = meteor_score(refs, cand)
+        except Exception:
+            m = 0.0
+        try:
+            r = rouge.score(" ".join(refs), cand)["rougeL"].fmeasure
+        except Exception:
+            r = 0.0
+        blues.append(b)
+        rouges.append(r)
+        meteors.append(m)
+    return {"bleu": float(np.mean(blues)), "rouge_l": float(np.mean(rouges)), "meteor": float(np.mean(meteors))}
 
 
 def main() -> None:
