@@ -44,8 +44,10 @@ data/processed/*.npy
 # Note: Models are committed to git, but we want to avoid re-uploading large data
 
 # Cache
-.streamlit/
 .pytest_cache/
+# Allow streamlit config but ignore cache
+.streamlit/cache/
+.streamlit/secrets.toml
 .coverage
 htmlcov/
 
