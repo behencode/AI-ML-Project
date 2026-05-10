@@ -266,7 +266,17 @@ def download_race_dataset(dataset_slug: str = DEFAULT_DATASET_SLUG, raw_dir: str
     if not dataset_slug:
         print("No Kaggle dataset slug supplied. Place one RACE CSV in data/raw or pass --source-csv.")
         return
-    run_command(["kaggle", "datasets", "download", "-d", dataset_slug, "-p", raw_dir])
+    try:
+        from kaggle.api.kaggle_api_extended import KaggleApi
+        api = KaggleApi()
+        api.authenticate()
+        print(f"Downloading dataset: {dataset_slug}")
+        api.dataset_download_files(dataset_slug, path=raw_dir, unzip=True)
+        print(f"Dataset downloaded and extracted to {raw_dir}")
+    except Exception as e:
+        print(f"Warning: Failed to download via Kaggle API: {e}")
+        print("Attempting fallback...")
+        run_command([sys.executable, "-m", "kaggle", "datasets", "download", "-d", dataset_slug, "-p", raw_dir])
     for zip_path in glob.glob(os.path.join(raw_dir, "*.zip")):
         try:
             with zipfile.ZipFile(zip_path, "r") as zip_ref:
