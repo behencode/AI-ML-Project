@@ -16,6 +16,7 @@ from sklearn.feature_extraction.text import CountVectorizer, ENGLISH_STOP_WORDS
 from sklearn.linear_model import LogisticRegression
 from sklearn.metrics import f1_score, precision_score, r2_score, recall_score
 from sklearn.metrics.pairwise import cosine_similarity
+from evaluate import compute_generation_metrics
 
 try:
     from preprocessing import build_ohe_vectorizer, clean_text

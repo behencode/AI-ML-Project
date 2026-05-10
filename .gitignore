@@ -1,0 +1,63 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+
+# Virtual environments
+.venv/
+venv/
+ENV/
+env/
+
+# IDEs
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+
+# Data files (too large)
+data/raw/*.csv
+data/raw/*.zip
+data/processed/*.npz
+data/processed/*.npy
+
+# Model files (tracked but large)
+# Note: Models are committed to git, but we want to avoid re-uploading large data
+
+# Cache
+.pytest_cache/
+# Allow streamlit config but ignore cache
+.streamlit/cache/
+.streamlit/secrets.toml
+.coverage
+htmlcov/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+
+# Temporary files
+*.tmp
+*.temp
