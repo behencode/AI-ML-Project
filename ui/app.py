@@ -426,11 +426,12 @@ def sidebar_nav() -> None:
 def home_screen(engine: RaceInferenceEngine) -> None:
     # Ensure RACE CSV splits exist in deployed filesystem.
     # If download isn't possible (no network / no Kaggle token), app falls back to demo behavior.
-    try:
-        ensure_dataset_available(force=False)
-    except Exception:
-        # Do not block app rendering.
-        pass
+    if ensure_dataset_available is not None:
+        try:
+            ensure_dataset_available(force=False)
+        except Exception:
+            # Do not block app rendering.
+            pass
 
     hero(
         "RACE Quiz AI",
