@@ -10,7 +10,6 @@ from html import escape
 from typing import Any
 
 import joblib
-import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 import plotly.express as px
@@ -48,7 +47,6 @@ def apply_theme() -> None:
             --rc-amber: #f59e0b;
         }
         
-        /* Typography */
         html, body, [class*="css"] {
             font-family: 'Outfit', sans-serif !important;
             color: var(--rc-ink) !important;
@@ -68,7 +66,6 @@ def apply_theme() -> None:
             max-width: 1280px;
         }
         
-        /* Sidebar styling */
         section[data-testid="stSidebar"] {
             background: rgba(15, 23, 42, 0.6) !important;
             backdrop-filter: blur(16px);
@@ -76,7 +73,6 @@ def apply_theme() -> None:
             border-right: 1px solid var(--rc-line);
         }
         
-        /* Buttons */
         div[data-testid="stButton"] button {
             border-radius: 12px;
             border: 1px solid rgba(255, 255, 255, 0.2);
@@ -101,8 +97,7 @@ def apply_theme() -> None:
             background: linear-gradient(135deg, #60a5fa, #3b82f6);
             box-shadow: 0 6px 20px rgba(37, 99, 235, 0.6);
         }
-        
-        /* Hero Section */
+
         .rc-hero {
             background: rgba(30, 41, 59, 0.6);
             backdrop-filter: blur(12px);
@@ -138,8 +133,7 @@ def apply_theme() -> None:
             font-size: 1.1rem;
             font-weight: 300;
         }
-        
-        /* Cards & Panels */
+
         .rc-card {
             background: var(--rc-panel);
             backdrop-filter: blur(10px);
@@ -164,8 +158,7 @@ def apply_theme() -> None:
             font-size: 0.95rem;
             line-height: 1.5;
         }
-        
-        /* Quiz Elements */
+
         .rc-question {
             background: rgba(59, 130, 246, 0.1);
             border-left: 4px solid #3b82f6;
@@ -190,8 +183,7 @@ def apply_theme() -> None:
             background: rgba(59, 130, 246, 0.1);
             border-color: rgba(59, 130, 246, 0.4);
         }
-        
-        /* KPIs */
+
         .rc-kpi {
             background: rgba(30, 41, 59, 0.5);
             border: 1px solid var(--rc-line);
@@ -215,8 +207,7 @@ def apply_theme() -> None:
             font-weight: 700;
             margin-top: 6px;
         }
-        
-        /* Elements */
+
         .rc-pill {
             display: inline-block;
             padding: 6px 12px;
@@ -238,8 +229,7 @@ def apply_theme() -> None:
             margin-bottom: 20px;
             font-weight: 500;
         }
-        
-        /* Inputs */
+
         textarea, input, .stSelectbox > div > div {
             background: rgba(30, 41, 59, 0.6) !important;
             border: 1px solid rgba(255, 255, 255, 0.1) !important;
@@ -250,14 +240,7 @@ def apply_theme() -> None:
             border-color: #3b82f6 !important;
             box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.2) !important;
         }
-        
-        /* Expander */
-        .streamlit-expanderHeader {
-            background: rgba(30, 41, 59, 0.4) !important;
-            border-radius: 8px !important;
-        }
-        
-        /* Tabs */
+
         .stTabs [data-baseweb="tab-list"] {
             gap: 24px;
             background: rgba(30, 41, 59, 0.4);
@@ -284,12 +267,13 @@ def apply_theme() -> None:
 
 
 def hero(title: str, subtitle: str) -> None:
-    """Render a compact page hero."""
-    st.markdown(f'<div class="rc-hero"><h1>{escape(title)}</h1><p>{escape(subtitle)}</p></div>', unsafe_allow_html=True)
+    st.markdown(
+        f'<div class="rc-hero"><h1>{escape(title)}</h1><p>{escape(subtitle)}</p></div>',
+        unsafe_allow_html=True,
+    )
 
 
 def kpi_card(label: str, value: str) -> None:
-    """Render a custom KPI card."""
     st.markdown(
         f'<div class="rc-kpi"><div class="label">{escape(label)}</div><div class="value">{escape(value)}</div></div>',
         unsafe_allow_html=True,
@@ -297,27 +281,22 @@ def kpi_card(label: str, value: str) -> None:
 
 
 def info_card(title: str, body: str) -> None:
-    """Render a white information card."""
-    st.markdown(f'<div class="rc-card"><h3>{escape(title)}</h3><div class="rc-muted">{escape(body)}</div></div>', unsafe_allow_html=True)
+    st.markdown(
+        f'<div class="rc-card"><h3>{escape(title)}</h3><div class="rc-muted">{escape(body)}</div></div>',
+        unsafe_allow_html=True,
+    )
 
 
 def warning_panel(message: str) -> None:
-    """Render a custom warning panel."""
     st.markdown(f'<div class="rc-warning">{escape(message)}</div>', unsafe_allow_html=True)
 
 
 @st.cache_resource
 def load_engine() -> RaceInferenceEngine:
-    """Load the inference engine once per Streamlit session.
-
-    Returns:
-        Cached ``RaceInferenceEngine`` instance.
-    """
     return RaceInferenceEngine(model_dir=os.path.join(ROOT_DIR, "models"))
 
 
 def init_state() -> None:
-    """Initialize all Streamlit session-state values used by the app."""
     defaults = {
         "screen": "📄 Article Input",
         "article_text": "",
@@ -327,9 +306,9 @@ def init_state() -> None:
         "answer_checked": False,
         "selected_option": None,
         "last_latency_ms": 0.0,
-        "race_question": None,   # populated when a RACE sample is loaded
-        "race_answer": None,     # correct answer text from the RACE sample
-        "race_options": None,    # original A/B/C/D options from the RACE sample
+        "race_question": None,
+        "race_answer": None,
+        "race_options": None,
         "sample_error": None,
         "sample_success": None,
         "load_sample_clicked": False,
@@ -340,77 +319,97 @@ def init_state() -> None:
 
 @st.cache_data
 def _load_test_csv(path: str) -> pd.DataFrame:
-    """Load the RACE test dataset with caching to avoid huge delays."""
     return pd.read_csv(path)
 
 
 def load_random_sample() -> tuple[str | None, str | None]:
-    """Load one random RACE test article into session state, including its question and answer."""
-    path = os.path.join(ROOT_DIR, "data", "raw", "test.csv")
-    try:
-        df = _load_test_csv(path)
+    """Load one random RACE CSV article into session state.
 
-        if df.empty:
-            return None, "❌ test.csv is empty. No articles available to load."
+    Streamlit deployments may not include all RACE splits.
+    We try test.csv first, then fall back to val.csv and train.csv.
+    """
 
-        sample = df.sample(1, random_state=np.random.default_rng().integers(0, 1_000_000)).iloc[0]
-        article = str(sample["article"])
+    candidate_files = [
+        ("test.csv", os.path.join(ROOT_DIR, "data", "raw", "test.csv")),
+        ("val.csv", os.path.join(ROOT_DIR, "data", "raw", "val.csv")),
+        ("train.csv", os.path.join(ROOT_DIR, "data", "raw", "train.csv")),
+    ]
 
-        if pd.isna(article) or article.strip() == "":
-            return None, "❌ Selected article is empty. Try loading another sample."
+    for name, path in candidate_files:
+        if not os.path.exists(path):
+            continue
 
-        # Store the original question and correct answer so the pipeline uses them
-        answer_label = str(sample["answer"]).strip().upper()
-        st.session_state["race_question"] = str(sample["question"])
-        st.session_state["race_answer"] = str(sample[answer_label])
-        st.session_state["race_options"] = {
-            lbl: str(sample[lbl]) for lbl in ["A", "B", "C", "D"]
-        }
+        try:
+            df = _load_test_csv(path)
+            if df.empty:
+                return None, f"❌ {name} is empty. No articles available to load."
 
-        return article, None
+            sample = df.sample(
+                1,
+                random_state=np.random.default_rng().integers(0, 1_000_000),
+            ).iloc[0]
 
-    except pd.errors.ParserError as e:
-        st.session_state.pop("race_question", None)
-        st.session_state.pop("race_answer", None)
-        st.session_state.pop("race_options", None)
-        return None, f"❌ CSV parsing error: {str(e)[:100]}...\n\nThe test.csv file might be corrupted."
-    except MemoryError:
-        st.session_state.pop("race_question", None)
-        st.session_state.pop("race_answer", None)
-        st.session_state.pop("race_options", None)
-        return None, "❌ File too large to load in memory. Try loading a smaller subset."
-    except FileNotFoundError:
-        st.session_state.pop("race_question", None)
-        st.session_state.pop("race_answer", None)
-        st.session_state.pop("race_options", None)
-        return None, f"❌ test.csv not found at {path}"
-    except Exception as e:
-        st.session_state.pop("race_question", None)
-        st.session_state.pop("race_answer", None)
-        st.session_state.pop("race_options", None)
-        return None, f"❌ Unexpected error: {str(e)}"
+            article = str(sample.get("article", ""))
+            if pd.isna(article) or article.strip() == "":
+                return None, "❌ Selected article is empty. Try loading another sample."
 
+            answer_label = str(sample.get("answer", "")).strip().upper()
+            st.session_state["race_question"] = str(sample.get("question", ""))
+            st.session_state["race_answer"] = str(sample.get(answer_label, ""))
+            st.session_state["race_options"] = {
+                lbl: str(sample.get(lbl, "")) for lbl in ["A", "B", "C", "D"]
+            }
 
-def _handle_load_sample_click() -> None:
-    """Callback for the Load Sample button. Marks the sample request for processing."""
-    st.session_state["load_sample_clicked"] = True
+            return article, None
 
+        except pd.errors.ParserError as e:
+            st.session_state.pop("race_question", None)
+            st.session_state.pop("race_answer", None)
+            st.session_state.pop("race_options", None)
+            return None, f"❌ CSV parsing error in {name}: {str(e)[:120]}..."
+        except MemoryError:
+            st.session_state.pop("race_question", None)
+            st.session_state.pop("race_answer", None)
+            st.session_state.pop("race_options", None)
+            return None, f"❌ {name} too large to load in memory."
+        except Exception as e:
+            st.session_state.pop("race_question", None)
+            st.session_state.pop("race_answer", None)
+            st.session_state.pop("race_options", None)
+            return None, f"❌ Unexpected error in {name}: {str(e)}"
 
+    missing = [name for name, path in candidate_files if not os.path.exists(path)]
+    return None, (
+        "❌ No RACE CSV splits found in data/raw. "
+        "Expected test.csv / val.csv / train.csv. "
+        f"Missing: {', '.join(missing)}"
+    )
 
 
 def sidebar_nav() -> None:
-    """Render sidebar navigation and synchronize the selected screen."""
     screens = ["📄 Article Input", "❓ Quiz", "💡 Hints", "📊 Analytics"]
     st.sidebar.markdown("<h2 style='margin-bottom: 0;'>🧠 RACE Quiz AI</h2>", unsafe_allow_html=True)
     st.sidebar.caption("Traditional ML reading comprehension lab")
     st.sidebar.markdown("<br>", unsafe_allow_html=True)
     current = st.session_state.get("screen", screens[0])
-    selected = st.sidebar.radio("Navigation", screens, index=screens.index(current) if current in screens else 0, label_visibility="collapsed")
+    selected = st.sidebar.radio(
+        "Navigation",
+        screens,
+        index=screens.index(current) if current in screens else 0,
+        label_visibility="collapsed",
+    )
     st.session_state["screen"] = selected
     st.sidebar.markdown("<br><br>", unsafe_allow_html=True)
     if st.sidebar.button("Reset Session"):
-        for key in ["quiz_result", "attempts", "answer_checked", "selected_option",
-                    "race_question", "race_answer", "race_options"]:
+        for key in [
+            "quiz_result",
+            "attempts",
+            "answer_checked",
+            "selected_option",
+            "race_question",
+            "race_answer",
+            "race_options",
+        ]:
             if key == "attempts":
                 st.session_state[key] = []
             else:
@@ -419,13 +418,15 @@ def sidebar_nav() -> None:
 
 
 def home_screen(engine: RaceInferenceEngine) -> None:
-    """Render Screen 1, article input and quiz generation."""
     hero(
         "RACE Quiz AI",
         "Generate reading-comprehension questions, distractors, hints, and model analytics using traditional machine learning.",
     )
     if engine.use_demo_mode:
-        warning_panel("Demo mode is active because one or more trained model files were not found. Rule-based fallbacks are being used.")
+        warning_panel(
+            "Demo mode is active because one or more trained model files were not found. Rule-based fallbacks are being used."
+        )
+
     if st.session_state.get("load_sample_clicked"):
         st.session_state["load_sample_clicked"] = False
         loaded_article, error_msg = load_random_sample()
@@ -435,8 +436,11 @@ def home_screen(engine: RaceInferenceEngine) -> None:
         else:
             st.session_state["article_text"] = loaded_article
             word_count = len(str(loaded_article).split())
-            st.session_state["sample_success"] = f"Loaded random sample ({word_count} words, {len(loaded_article)} characters)"
+            st.session_state["sample_success"] = (
+                f"Loaded random sample ({word_count} words, {len(loaded_article)} characters)"
+            )
             st.session_state["sample_error"] = None
+
     c1, c2, c3 = st.columns(3)
     with c1:
         info_card("Model A", "Answer verification with sparse OHE features, lexical overlap, and voting ensembles.")
@@ -444,12 +448,18 @@ def home_screen(engine: RaceInferenceEngine) -> None:
         info_card("Model B", "Distractor ranking, diversity checks, and graduated hint generation.")
     with c3:
         info_card("Evaluation", "Session logs, confusion matrix, metric cards, and exportable attempts.")
+
     st.markdown("<br>", unsafe_allow_html=True)
     left, right = st.columns([2.5, 1], gap="large")
     with left:
         st.markdown("<h3 style='margin-bottom: 12px;'>Reading Passage</h3>", unsafe_allow_html=True)
-        article = st.text_area("Paste a reading passage", key="article_text", height=320, label_visibility="collapsed")
-        
+        article = st.text_area(
+            "Paste a reading passage",
+            key="article_text",
+            height=320,
+            label_visibility="collapsed",
+        )
+
         st.markdown("<br>", unsafe_allow_html=True)
         if st.button("Generate Quiz", type="primary", use_container_width=True):
             if not article.strip():
@@ -457,7 +467,6 @@ def home_screen(engine: RaceInferenceEngine) -> None:
                 return
             try:
                 with st.spinner("Generating quiz..."):
-                    # If a RACE sample was loaded, pass its question and answer
                     race_q = st.session_state.get("race_question")
                     race_a = st.session_state.get("race_answer")
                     st.session_state["quiz_result"] = engine.run_full_pipeline(
@@ -469,7 +478,6 @@ def home_screen(engine: RaceInferenceEngine) -> None:
                     st.session_state["hints_revealed"] = 1
                     st.session_state["answer_checked"] = False
                     st.session_state["selected_option"] = None
-                    # Clear RACE-specific state after use
                     st.session_state["race_question"] = None
                     st.session_state["race_answer"] = None
                     st.session_state["screen"] = "❓ Quiz"
@@ -483,23 +491,31 @@ def home_screen(engine: RaceInferenceEngine) -> None:
         st.markdown("<div style='margin-bottom: 12px;'></div>", unsafe_allow_html=True)
         kpi_card("Characters", str(len(article) if article else 0))
         st.markdown("<div style='margin-bottom: 24px;'></div>", unsafe_allow_html=True)
-        st.button("Load Random RACE Sample", on_click=load_random_sample, use_container_width=True)
-    # Removed the standalone Generate Quiz button since it was moved inside the left column.
+        st.button(
+            "Load Random RACE Sample",
+            on_click=lambda: st.session_state.__setitem__("load_sample_clicked", True),
+            use_container_width=True,
+        )
 
 
 def quiz_screen(engine: RaceInferenceEngine) -> None:
-    """Render Screen 2, multiple-choice quiz interaction."""
     result = st.session_state.get("quiz_result")
     if not result:
         st.info("Generate a quiz from the Article Input screen first.")
         return
+
     hero("Quiz Workspace", "Read the passage, select an answer, then inspect hints and model confidence.")
     with st.expander("Read the Passage", expanded=False):
         st.write(st.session_state.get("article_text", ""))
+
     st.markdown(f'<div class="rc-question">{escape(result["question"])}</div>', unsafe_allow_html=True)
     st.markdown("#### Options")
     for label, value in result["options"].items():
-        st.markdown(f'<div class="rc-option"><b>{escape(label)}.</b> {escape(str(value))}</div>', unsafe_allow_html=True)
+        st.markdown(
+            f'<div class="rc-option"><b>{escape(label)}.</b> {escape(str(value))}</div>',
+            unsafe_allow_html=True,
+        )
+
     labels = list(result["options"].keys())
     selected = st.radio(
         "Choose an answer",
@@ -507,8 +523,10 @@ def quiz_screen(engine: RaceInferenceEngine) -> None:
         format_func=lambda label: f"{label}. {result['options'][label]}",
         key="selected_option",
     )
+
     st.markdown("<br>", unsafe_allow_html=True)
     col1, col2, col3 = st.columns(3, gap="medium")
+
     with col1:
         if st.button("Check My Answer", type="primary", use_container_width=True):
             correct = selected == result["correct"]
@@ -522,22 +540,29 @@ def quiz_screen(engine: RaceInferenceEngine) -> None:
             }
             st.session_state["attempts"].append(row)
             st.session_state["answer_checked"] = True
+
     with col2:
         if st.button("Get Hints", width="stretch"):
             st.session_state["screen"] = "💡 Hints"
             st.rerun()
+
     with col3:
         if st.button("Try Another Question", width="stretch"):
             st.session_state["screen"] = "📄 Article Input"
             st.session_state["quiz_result"] = None
             st.rerun()
+
     if st.session_state.get("answer_checked"):
         if selected == result["correct"]:
-            st.success(f"Correct. The answer is {result['correct']}: {result['options'][result['correct']]}.")
+            st.success(
+                f"Correct. The answer is {result['correct']}: {result['options'][result['correct']]}."
+            )
         else:
             hint = result.get("hints", ["Review the passage."])[0]
-            st.error(f"Not quite. Correct answer: {result['correct']}. {result['options'][result['correct']]}. Hint: {hint}")
-    
+            st.error(
+                f"Not quite. Correct answer: {result['correct']}. {result['options'][result['correct']]}. Hint: {hint}"
+            )
+
     st.markdown("<br><br>", unsafe_allow_html=True)
     metric_cols = st.columns(3, gap="large")
     with metric_cols[0]:
@@ -550,18 +575,29 @@ def quiz_screen(engine: RaceInferenceEngine) -> None:
 
 
 def hints_screen() -> None:
-    """Render Screen 3, graduated hint reveal panel."""
     result = st.session_state.get("quiz_result")
     if not result:
         st.info("Generate a quiz first.")
         return
-    st.markdown("<br>", unsafe_allow_html=True)
+
     hero("Hint Panel", "Reveal support gradually before showing the final answer.")
-    st.markdown("<br>", unsafe_allow_html=True)
     with st.expander("Passage", expanded=False):
         st.write(st.session_state.get("article_text", ""))
-    hints = result.get("hints", ["Review the main idea.", "Find the sentence related to the question.", "Look near the answer phrase."])
-    labels = ["💡 Hint 1 — General Clue", "💡 Hint 2 — More Specific", "💡 Hint 3 — Near Explicit"]
+
+    hints = result.get(
+        "hints",
+        [
+            "Review the main idea.",
+            "Find the sentence related to the question.",
+            "Look near the answer phrase.",
+        ],
+    )
+    labels = [
+        "💡 Hint 1 — General Clue",
+        "💡 Hint 2 — More Specific",
+        "💡 Hint 3 — Near Explicit",
+    ]
+
     revealed = st.session_state.get("hints_revealed", 1)
     for idx, label in enumerate(labels, start=1):
         if revealed >= idx:
@@ -572,16 +608,18 @@ def hints_screen() -> None:
                     st.rerun()
         else:
             st.markdown(f'<span class="rc-pill">{escape(label)} locked</span>', unsafe_allow_html=True)
+
     if st.session_state.get("hints_revealed", 1) >= 3:
         if st.button("Reveal Answer", type="primary"):
-            st.success(f"Answer: {result['correct']}. {result['options'][result['correct']]}")
+            st.success(
+                f"Answer: {result['correct']}. {result['options'][result['correct']]}")
+
     if st.button("Back to Quiz"):
         st.session_state["screen"] = "❓ Quiz"
         st.rerun()
 
 
 def _load_pickle(path: str, default: Any) -> Any:
-    """Load a pickle/joblib artifact with fallback."""
     try:
         return joblib.load(path)
     except Exception:
@@ -589,7 +627,6 @@ def _load_pickle(path: str, default: Any) -> Any:
 
 
 def _file_size(path: str) -> str:
-    """Return a human-readable file size."""
     try:
         size_mb = os.path.getsize(path) / (1024 * 1024)
         return f"{size_mb:.2f} MB"
@@ -598,58 +635,70 @@ def _file_size(path: str) -> str:
 
 
 def analytics_screen(engine: RaceInferenceEngine) -> None:
-    """Render Screen 4, analytics dashboard."""
     hero("Analytics Dashboard", "Inspect model behavior, session outcomes, artifacts, and runtime details.")
     tabs = st.tabs(["Model A Performance", "Model B Performance", "Session Log", "System Info"])
-    model_a_results = _load_pickle(os.path.join(ROOT_DIR, "models", "model_a", "traditional", "results.pkl"), {})
-    model_b_results = _load_pickle(os.path.join(ROOT_DIR, "models", "model_b", "traditional", "results.pkl"), {})
+
+    model_a_results = _load_pickle(
+        os.path.join(ROOT_DIR, "models", "model_a", "traditional", "results.pkl"), {}
+    )
+    model_b_results = _load_pickle(
+        os.path.join(ROOT_DIR, "models", "model_b", "traditional", "results.pkl"), {}
+    )
+
     with tabs[0]:
         metrics_df = model_a_results.get("metrics") if isinstance(model_a_results, dict) else None
         if isinstance(metrics_df, pd.DataFrame) and not metrics_df.empty:
             best = metrics_df.sort_values("macro_f1", ascending=False).iloc[0]
             st.markdown("#### Top Model (by Macro F1)")
             cols = st.columns(5)
-            
+
             def _fmt_kpi(val: Any) -> str:
                 if pd.isna(val):
                     return "N/A"
                 return f"{val:.3f}"
-                
+
             with cols[0]:
-                kpi_card("Accuracy", _fmt_kpi(best.get('accuracy', 0)))
+                kpi_card("Accuracy", _fmt_kpi(best.get("accuracy", 0)))
             with cols[1]:
-                kpi_card("Macro F1", _fmt_kpi(best.get('macro_f1', 0)))
+                kpi_card("Macro F1", _fmt_kpi(best.get("macro_f1", 0)))
             with cols[2]:
-                kpi_card("ROC AUC", _fmt_kpi(best.get('roc_auc', 0)))
+                kpi_card("ROC AUC", _fmt_kpi(best.get("roc_auc", 0)))
             with cols[3]:
-                kpi_card("PR AUC", _fmt_kpi(best.get('pr_auc', 0)))
+                kpi_card("PR AUC", _fmt_kpi(best.get("pr_auc", 0)))
             with cols[4]:
-                kpi_card("Brier Score", _fmt_kpi(best.get('brier_score', 0)))
-            
+                kpi_card("Brier Score", _fmt_kpi(best.get("brier_score", 0)))
+
             st.markdown("<br>", unsafe_allow_html=True)
             cm = model_a_results.get("confusion_matrix", np.asarray([[0, 0], [0, 0]]))
             st.pyplot(plot_confusion_matrix(cm, ["Wrong", "Correct"], "Model A Confusion Matrix"))
-            
-            chart_df = metrics_df[metrics_df["model"].astype(str).str.contains("Logistic|SVC|NB|Ensemble", case=False, regex=True)]
-            st.plotly_chart(px.bar(chart_df, x="model", y=["macro_f1", "roc_auc"], barmode="group", title="Model Comparisons"), use_container_width=True)
-        
-            nlp_df = model_a_results.get("nlp_metrics")
-            if isinstance(nlp_df, dict) and nlp_df:
-                st.markdown("#### Generation Metrics (NLP)")
-                nlp_cols = st.columns(3)
-                with nlp_cols[0]:
-                    kpi_card("BLEU", f"{nlp_df.get('question_bleu', 0):.3f}")
-                with nlp_cols[1]:
-                    kpi_card("ROUGE-L", f"{nlp_df.get('question_rouge', 0):.3f}")
-                with nlp_cols[2]:
-                    kpi_card("METEOR", f"{nlp_df.get('question_meteor', 0):.3f}")
-            st.markdown("<br>", unsafe_allow_html=True)
-            
+
+            chart_df = metrics_df[
+                metrics_df["model"].astype(str).str.contains(
+                    "Logistic|SVC|NB|Ensemble", case=False, regex=True
+                )
+            ]
+            st.plotly_chart(
+                px.bar(
+                    chart_df,
+                    x="model",
+                    y=["macro_f1", "roc_auc"],
+                    barmode="group",
+                    title="Model Comparisons",
+                ),
+                use_container_width=True,
+            )
+
         else:
             st.warning("Model A results not found. Train Model A to populate this dashboard.")
-        latencies = [a.get("latency_ms", 0) for a in st.session_state.get("attempts", []) if "latency_ms" in a]
+
+        latencies = [
+            a.get("latency_ms", 0)
+            for a in st.session_state.get("attempts", [])
+            if "latency_ms" in a
+        ]
         latency_str = f"{np.mean(latencies):.1f} ms" if latencies else "No data yet"
         st.metric("Average inference latency", latency_str)
+
     with tabs[1]:
         if isinstance(model_b_results, dict) and model_b_results:
             cols = st.columns(5)
@@ -663,21 +712,34 @@ def analytics_screen(engine: RaceInferenceEngine) -> None:
                 kpi_card("Hit Rate@3", f"{model_b_results.get('distractor_hit_rate_at_3', 0):.3f}")
             with cols[4]:
                 kpi_card("Diversity", f"{model_b_results.get('pairwise_cosine_diversity', 0):.3f}")
-                
+
             st.markdown("#### Distractor Generation (NLP)")
-            nlp_cols2 = st.columns(3)
-            with nlp_cols2[0]:
+            nlp_cols = st.columns(3)
+            with nlp_cols[0]:
                 kpi_card("BLEU", f"{model_b_results.get('distractor_bleu', 0):.3f}")
-            with nlp_cols2[1]:
+            with nlp_cols[1]:
                 kpi_card("ROUGE-L", f"{model_b_results.get('distractor_rougeL', 0):.3f}")
-            with nlp_cols2[2]:
+            with nlp_cols[2]:
                 kpi_card("METEOR", f"{model_b_results.get('distractor_meteor', 0):.3f}")
-                
+
             st.markdown("<br>", unsafe_allow_html=True)
-            hint_df = pd.DataFrame({"K": ["P@1", "P@2", "P@3"], "Precision": [0.0, 0.0, model_b_results.get("hint_precision_at_k", 0)]})
-            st.plotly_chart(px.bar(hint_df, x="K", y="Precision", title="Hint Precision@K"), use_container_width=True)
+            hint_df = pd.DataFrame(
+                {
+                    "K": ["P@1", "P@2", "P@3"],
+                    "Precision": [
+                        0.0,
+                        0.0,
+                        model_b_results.get("hint_precision_at_k", 0),
+                    ],
+                }
+            )
+            st.plotly_chart(
+                px.bar(hint_df, x="K", y="Precision", title="Hint Precision@K"),
+                use_container_width=True,
+            )
         else:
             st.warning("Model B results not found. Train Model B to populate metrics.")
+
         sample = pd.DataFrame(
             [
                 {"example": 1, "distractor": "school library", "quality_note": "plausible location"},
@@ -688,6 +750,7 @@ def analytics_screen(engine: RaceInferenceEngine) -> None:
             ]
         )
         st.dataframe(sample, use_container_width=True)
+
     with tabs[2]:
         attempts = pd.DataFrame(st.session_state.get("attempts", []))
         st.dataframe(attempts, use_container_width=True)
@@ -696,24 +759,44 @@ def analytics_screen(engine: RaceInferenceEngine) -> None:
         st.metric("Total attempts", total)
         st.metric("Correct", correct)
         st.metric("Session accuracy", f"{(correct / total * 100) if total else 0:.1f}%")
-        st.download_button("Export to CSV", attempts.to_csv(index=False), "session_log.csv", "text/csv", disabled=attempts.empty)
+        st.download_button(
+            "Export to CSV",
+            attempts.to_csv(index=False),
+            "session_log.csv",
+            "text/csv",
+            disabled=attempts.empty,
+        )
+
     with tabs[3]:
         model_files = [
             os.path.join(ROOT_DIR, "models", "model_a", "traditional", "logistic_regression.pkl"),
             os.path.join(ROOT_DIR, "models", "model_a", "traditional", "linear_svc_calibrated.pkl"),
             os.path.join(ROOT_DIR, "models", "model_b", "traditional", "model_b_artifacts.pkl"),
         ]
-        st.dataframe(pd.DataFrame({"file": [os.path.basename(p) for p in model_files], "size": [_file_size(p) for p in model_files]}))
-        vocab_size = len(getattr(engine.ohe_vectorizer, "vocabulary_", {})) if engine.ohe_vectorizer is not None else 0
+        st.dataframe(
+            pd.DataFrame(
+                {
+                    "file": [os.path.basename(p) for p in model_files],
+                    "size": [_file_size(p) for p in model_files],
+                }
+            )
+        )
+        vocab_size = (
+            len(getattr(engine.ohe_vectorizer, "vocabulary_", {}))
+            if engine.ohe_vectorizer is not None
+            else 0
+        )
         st.write(f"Vocabulary size: {vocab_size}")
         st.write(f"Python: {platform.python_version()}")
         st.write(f"Streamlit: {st.__version__}")
+
         try:
             import sklearn
 
             st.write(f"scikit-learn: {sklearn.__version__}")
         except Exception:
             st.write("scikit-learn: unavailable")
+
         try:
             import torch
 
@@ -723,11 +806,11 @@ def analytics_screen(engine: RaceInferenceEngine) -> None:
 
 
 def main() -> None:
-    """Run the Streamlit application."""
     apply_theme()
     init_state()
     engine = load_engine()
     sidebar_nav()
+
     screen = st.session_state.get("screen", "📄 Article Input")
     if screen == "📄 Article Input":
         home_screen(engine)
@@ -741,3 +824,4 @@ def main() -> None:
 
 if __name__ == "__main__":
     main()
+
