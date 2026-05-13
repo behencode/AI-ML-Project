@@ -344,7 +344,7 @@ def _load_test_csv(path: str) -> pd.DataFrame:
     return pd.read_csv(path)
 
 
-def load_random_sample() -> None:
+def load_random_sample() -> tuple[str | None, str | None]:
     """Load one random RACE test article into session state, including its question and answer."""
     path = os.path.join(ROOT_DIR, "data", "raw", "test.csv")
     try:
