@@ -22,7 +22,11 @@ if SRC_DIR not in sys.path:
 
 from evaluate import plot_confusion_matrix  # noqa: E402
 from inference import RaceInferenceEngine  # noqa: E402
-from scripts.ensure_kaggle_data_on_streamlit import ensure_dataset_available  # noqa: E402
+try:
+    from scripts.ensure_kaggle_data_on_streamlit import ensure_dataset_available  # noqa: E402
+except ModuleNotFoundError:
+    ensure_dataset_available = None
+
 
 
 st.set_page_config(layout="wide", page_title="RACE Quiz AI", page_icon="🧠")
@@ -422,11 +426,12 @@ def sidebar_nav() -> None:
 def home_screen(engine: RaceInferenceEngine) -> None:
     # Ensure RACE CSV splits exist in deployed filesystem.
     # If download isn't possible (no network / no Kaggle token), app falls back to demo behavior.
-    try:
-        ensure_dataset_available(force=False)
-    except Exception:
-        # Do not block app rendering.
-        pass
+    if ensure_dataset_available is not None:
+        try:
+            ensure_dataset_available(force=False)
+        except Exception:
+            # Do not block app rendering.
+            pass
 
     hero(
         "RACE Quiz AI",
