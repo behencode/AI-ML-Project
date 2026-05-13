@@ -330,6 +330,9 @@ def init_state() -> None:
         "race_question": None,   # populated when a RACE sample is loaded
         "race_answer": None,     # correct answer text from the RACE sample
         "race_options": None,    # original A/B/C/D options from the RACE sample
+        "sample_error": None,
+        "sample_success": None,
+        "load_sample_clicked": False,
     }
     for key, value in defaults.items():
         st.session_state.setdefault(key, value)
@@ -346,8 +349,16 @@ def load_random_sample() -> None:
     path = os.path.join(ROOT_DIR, "data", "raw", "test.csv")
     try:
         df = _load_test_csv(path)
+
+        if df.empty:
+            return None, "❌ test.csv is empty. No articles available to load."
+
         sample = df.sample(1, random_state=np.random.default_rng().integers(0, 1_000_000)).iloc[0]
-        st.session_state["article_text"] = str(sample["article"])
+        article = str(sample["article"])
+
+        if pd.isna(article) or article.strip() == "":
+            return None, "❌ Selected article is empty. Try loading another sample."
+
         # Store the original question and correct answer so the pipeline uses them
         answer_label = str(sample["answer"]).strip().upper()
         st.session_state["race_question"] = str(sample["question"])
@@ -355,11 +366,36 @@ def load_random_sample() -> None:
         st.session_state["race_options"] = {
             lbl: str(sample[lbl]) for lbl in ["A", "B", "C", "D"]
         }
-    except Exception as exc:
-        st.error(f"Could not load test.csv sample. Place the RACE CSVs in data/raw first. Details: {exc}")
+
+        return article, None
+
+    except pd.errors.ParserError as e:
         st.session_state.pop("race_question", None)
         st.session_state.pop("race_answer", None)
         st.session_state.pop("race_options", None)
+        return None, f"❌ CSV parsing error: {str(e)[:100]}...\n\nThe test.csv file might be corrupted."
+    except MemoryError:
+        st.session_state.pop("race_question", None)
+        st.session_state.pop("race_answer", None)
+        st.session_state.pop("race_options", None)
+        return None, "❌ File too large to load in memory. Try loading a smaller subset."
+    except FileNotFoundError:
+        st.session_state.pop("race_question", None)
+        st.session_state.pop("race_answer", None)
+        st.session_state.pop("race_options", None)
+        return None, f"❌ test.csv not found at {path}"
+    except Exception as e:
+        st.session_state.pop("race_question", None)
+        st.session_state.pop("race_answer", None)
+        st.session_state.pop("race_options", None)
+        return None, f"❌ Unexpected error: {str(e)}"
+
+
+def _handle_load_sample_click() -> None:
+    """Callback for the Load Sample button. Marks the sample request for processing."""
+    st.session_state["load_sample_clicked"] = True
+
+
 
 
 def sidebar_nav() -> None:
@@ -390,6 +426,17 @@ def home_screen(engine: RaceInferenceEngine) -> None:
     )
     if engine.use_demo_mode:
         warning_panel("Demo mode is active because one or more trained model files were not found. Rule-based fallbacks are being used.")
+    if st.session_state.get("load_sample_clicked"):
+        st.session_state["load_sample_clicked"] = False
+        loaded_article, error_msg = load_random_sample()
+        if error_msg:
+            st.session_state["sample_error"] = error_msg
+            st.session_state["sample_success"] = None
+        else:
+            st.session_state["article_text"] = loaded_article
+            word_count = len(str(loaded_article).split())
+            st.session_state["sample_success"] = f"Loaded random sample ({word_count} words, {len(loaded_article)} characters)"
+            st.session_state["sample_error"] = None
     c1, c2, c3 = st.columns(3)
     with c1:
         info_card("Model A", "Answer verification with sparse OHE features, lexical overlap, and voting ensembles.")
